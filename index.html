@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>three.js canvas - geometry - cube</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+            body {
+                font-family: Monospace;
+                background-color: #f0f0f0;
+                margin: 0px;
+                overflow: hidden;
+            }
+        </style>
+        <script src="EventEmitter.js"></script>
+        <script src="jquery-2.1.1.js"></script>
+        <script src="three.js"></script>
+        <script src="app.js"></script>
+        <script src="utils.js"></script>
+
+        <script src="controls/FlyControls.js"></script>
+        <script src="controls/OrbitControls.js"></script>
+        <script src="controls/OrthographicTrackballControls.js"></script>
+
+        <script src="libs/stats.min.js"></script>
+    </head>
+
+    <body>
+      <img src="images/mi2-jail.gif" id="ref-image" style="display:none" />
+    </body>
+
+<script>
+"use strict";
+
+// http://jsfiddle.net/4Txgp/13/
+
+function mark (position) {
+    var geometry = new THREE.BoxGeometry(50, 50, 50);
+    var material = new THREE.MeshPhongMaterial({color: 0xff0000});
+    var cube = new THREE.Mesh(geometry, material);
+    cube.position.x = position.x;
+    cube.position.y = position.y;
+    cube.position.z = position.z;
+    this.scene.add(cube);
+}
+
+var image = document.getElementById("ref-image");
+
+var app = new App();
+
+app.createScene = function() {
+    //this.cameras[0].debug();
+    //this.cameras[1].debug();
+    //this.cameras[2].debug();
+
+    // LIGHTS
+    this.scene.add(new THREE.AmbientLight(0x222222));
+
+
+    var light = new THREE.SpotLight(0xffffff, 1, 0, Math.PI / 2, 1);
+    light.position.set(0, 1500, 0);
+    light.target.position.set(0, 0, 0);
+
+    light.castShadow = true;
+
+    light.shadowCameraNear = 120;
+    light.shadowCameraFar = 25000;
+    light.shadowCameraFov = 50;
+
+    //light.shadowCameraVisible = true;
+
+    light.shadowBias = 0.0001;
+    light.shadowDarkness = 0.5;
+
+    light.shadowMapWidth = 1024;
+    light.shadowMapHeight = 1024;
+
+    this.scene.add(light);
+
+    //mark(light.position);
+
+    // Cubes
+/*
+    var pixels = image_to_pixels(image, document.getElementById("ref-image-depth")),
+        width = image.width,
+        height = image.height,
+        count = 0,
+        box_size = 7;
+
+    for (var i = 0; i < pixels.length; i += 4) {
+        if (pixels[i] !== undefined) {
+            var box_width = (pixels[i] + pixels[i+1] + pixels[i+2]) / 3 / 50;
+            var geometry = new THREE.BoxGeometry(box_size, box_size, box_size * box_width);
+
+            for (var j = 0; j < geometry.faces.length; ++j) {
+                geometry.faces[ j ].color.setRGB(pixels[i] / 255, pixels[i+1] / 255, pixels[i+2] / 255);
+            }
+            var material = new THREE.MeshBasicMaterial({ vertexColors: THREE.FaceColors, overdraw: 0.5 });
+
+            //var material = new THREE.MeshLambertMaterial({color: (pixels[i]) << 16 ^ (pixels[i+1] * 255) << 8 ^ (pixels[i+2] * 255) << 0, specular: 0xffffff, ambient: 0x000000 });
+            //var material = new THREE.MeshPhongMaterial({color: (pixels[i]) << 16 ^ (pixels[i+1] * 255) << 8 ^ (pixels[i+2] * 255) << 0, specular: 0xffffff, ambient: 0x000000 });
+
+            var cube = new THREE.Mesh(geometry, material);
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+
+
+            cube.position.x = (count % width) * box_size;
+            cube.position.y = Math.floor(height - count / width) * box_size;
+            //cube.position.x = (count % 20) * box_size;
+            //cube.position.y = Math.floor(count / 20) * box_size;
+            this.scene.add(cube);
+
+        }
+        ++count;
+    }
+    */
+
+    // Plane
+
+    var geometry = new THREE.BoxGeometry(10, 10, 10);
+
+    //var material = new THREE.MeshBasicMaterial({ color: 0xe0e0e0, overdraw: 0.5 });
+    //var material = new THREE.MeshPhongMaterial({ color: 0xe0e0e0 });
+    var material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+    material.ambient = material.color;
+
+    var box = new THREE.Mesh(geometry, material);
+    this.scene.add(box);
+
+    geometry = new THREE.PlaneGeometry(512, 512);
+    geometry.applyMatrix(
+        new THREE.Matrix4().makeRotationX(- Math.PI / 2)
+    );
+    var plane = new THREE.Mesh(geometry, material);
+
+    plane.castShadow = false;
+    plane.receiveShadow = true;
+    plane.position.y = -0;
+    this.scene.add(plane);
+
+
+    this.displayAxes();
+};
+
+image.onload = function() {
+    app.init({
+        width: 400 || window.innerWidth,
+        height: 400 || window.innerHeight
+    });
+    app.update();
+};
+
+
+</script>
+
+
+
+
+
+
+
+
