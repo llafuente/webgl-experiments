@@ -13,6 +13,7 @@
             }
             canvas {
                 border: 1px solid black;
+                cursor: crosshair;
             }
             #tools img {
                 border: 1px solid white;
@@ -28,6 +29,10 @@
         <script src="app.js"></script>
         <script src="utils.js"></script>
 
+        <!-- app friendly -->
+        <script src="controls/OrthographicZoom.js"></script>
+
+        <!-- threejs -->
         <script src="controls/FlyControls.js"></script>
         <script src="controls/OrbitControls.js"></script>
         <script src="controls/OrthographicTrackballControls.js"></script>
@@ -40,14 +45,33 @@
     </head>
 
     <body>
-        <div style="width:64px; position: absolute; right: 0;" id="tools">
+        <div style="width:256px; position: absolute; right: 0;" id="tools">
+          <div>
             <img id="tool-camera" class="selected" src="images/1409329287_film_camera_16mm.png" />
             <img id="tool-move" src="images/1409329351_move_alt1-64.png" />
             <img id="tool-push" src="images/1409329490_arrow_up_alt1-64.png" />
             <img id="tool-pull" src="images/1409329484_arrow_down_alt1-64.png" />
+          </div>
+          <div>
+            <form id="scene">
+             <legend>Scene Size</legend>
+             <input type="number" id="scene_x" name="scene_x" value="200" />
+             <input type="number" id="scene_y" name="scene_y" value="200" />
+             <input type="submit" name="Change" value="Change" />
+            </form>
+            <form id="brush">
+             <legend>Brush Size</legend>
+             <input type="number" id="brush_x" name="brush_x" value="1" />
+             <input type="number" id="brush_y" name="brush_y" value="1" />
+             <select id="brush_amount" name="brush_amount">
+               <option value="20">PULL</option>
+               <option value="-20">PUSH</option>
+             </select>
+             <input type="submit" name="Change" value="Change" />
+            </form>
+          </div>
         </div>
     </body>
-
 <script>
 "use strict";
 
@@ -93,6 +117,12 @@ function createTPMaterial() {
     });
 }
 
+var wireframe = new THREE.MeshPhongMaterial({
+    color: 0x555555,
+    wireframe: true,
+});
+wireframe.ambient = wireframe.color;
+
 var app = new App();
 
 app.createScene = function() {
@@ -102,18 +132,44 @@ app.createScene = function() {
 
     this.scene.add(new THREE.AmbientLight(0xffffff));
 
-/*
-    // LIGHTS
 
+    // LIGHTS
+    var light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(110, 100, 10);
+
+    light.castShadow = true;
+    light.shadowCameraVisible = true;
+
+    light.shadowMapWidth = 512;
+    light.shadowMapHeight = 512;
+
+    var d = 200;
+
+    light.shadowCameraLeft = -d;
+    light.shadowCameraRight = d;
+    light.shadowCameraTop = d;
+    light.shadowCameraBottom = -d;
+
+    light.shadowCameraFar = 1000;
+    light.shadowDarkness = 0.75;
+
+    this.scene.add(light);
+/*
     var light = new THREE.SpotLight(0xffffff, 1, 0, Math.PI / 2, 1);
-    light.position.set(0, 1500, 0);
+    light.position.set(500, 500, 500);
     light.target.position.set(0, 0, 0);
 
     light.castShadow = true;
 
-    light.shadowCameraNear = 120;
+    light.shadowCameraNear = 0;
     light.shadowCameraFar = 25000;
-    light.shadowCameraFov = 50;
+    light.shadowCameraFov = 45;
+
+    light.shadowCameraRight    =  500;
+    light.shadowCameraLeft     = -500;
+    light.shadowCameraTop      =  500;
+    light.shadowCameraBottom   = -500;
+
 
     //light.shadowCameraVisible = true;
 
@@ -123,9 +179,9 @@ app.createScene = function() {
     light.shadowMapWidth = 1024;
     light.shadowMapHeight = 1024;
 
-    this.scene.add(light);
+    light.shadowCameraVisible = true;
 
-    //mark(light.position);
+    this.scene.add(light);
 
     // Cubes
     var pixels = image_to_pixels(image, document.getElementById("ref-image-depth")),
@@ -168,56 +224,94 @@ app.createScene = function() {
 
     //var material = new THREE.MeshBasicMaterial({ color: 0xe0e0e0, overdraw: 0.5 });
     //var material = new THREE.MeshPhongMaterial({ color: 0xe0e0e0 });
-    var material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
     material.ambient = material.color;
 
     var box = new THREE.Mesh(geometry, material);
     this.scene.add(box);
 
     */
-    var material = new THREE.MeshPhongMaterial({
-        color: 0xffff00,
-        wireframe: true,
+
+    // link scene size here!
+
+    var material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+    var material = new THREE.MeshLambertMaterial({
+        color: 0xffffff
     });
-    material.ambient = material.color;
-    var geometry = new THREE.PlaneGeometry(100, 100, 100, 100);
+    var material = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        map: THREE.ImageUtils.loadTexture("images/Monkey_island_2_prison.png")
+    });
+
+    var resolution = [320, 200];
+
+    var geometry = new THREE.PlaneGeometry(resolution[0], resolution[1], resolution[0], resolution[1]);
     geometry.applyMatrix(
         new THREE.Matrix4().makeRotationY(Math.PI)
     );
 
+    console.log(geometry.vertices[0]);
+    console.log(geometry.vertices[geometry.vertices.length - 1]);
+
     geometry.dynamic = true;
-
-    this.on("mousedown", function(event) {
-        if (app.lastSelectedCamera == app.cameras[2]) {
-
-            var idx = event.cameraX +  event.cameraY * 200;
-
-            console.log(idx, "pull!");
-
-            // edit geometry
-
-            geometry.verticesNeedUpdate = true;
-
-            geometry.vertices[idx].z += 20;
-        }
-    })
 
     var plane = new THREE.Mesh(geometry, material);
 
-    plane.castShadow = false;
+    plane.castShadow = true;
     plane.receiveShadow = true;
     plane.position.y = -0;
     this.scene.add(plane);
 
+    function move_vertex(x, y, amount) {
+        // y need to be inverted
+        // console.log(x, y, amount);
+
+        var idx = x +  y * (resolution[0] + 1);
+        if (idx < geometry.vertices.length) {
+            // push/pull
+            geometry.vertices[idx].z += amount;
+        }
+    }
+
+    // TODO offset cam.position.xy
+    this.on("mousedown", function(event) {
+        var tx = parseInt(jQuery("#brush_x").val(), 10),
+            ty = parseInt(jQuery("#brush_y").val(), 10),
+            amount = parseInt(jQuery("#brush_amount").val(), 10),
+            x,
+            y,
+            cam = app.cameras[2],
+            cfg = cam.$cfg,
+            mouse_x = Math.floor(event.cameraX / cfg.aspectRatio),
+            mouse_y = Math.floor(event.cameraIY / cfg.aspectRatio);
+
+        var offset = [
+            (cfg.width / cfg.aspectRatio - resolution[0]) * 0.5,
+            (cfg.height / cfg.aspectRatio - resolution[1]) * 0.5
+        ];
+
+        console.log("offset", offset);
+
+        if (app.lastSelectedCamera == cam) {
+
+            for (x = 0; x < tx; ++x) {
+                for (y = 0; y < ty; ++y) {
+                    move_vertex(mouse_x + x - offset[0], mouse_y + y - offset[1], amount);
+                    //move_vertex(0 + x, 0 + y, amount);
+                }
+            }
+
+            geometry.verticesNeedUpdate = true;
+        }
+    });
 
     this.displayAxes();
 };
 
 $(document).ready(function() {
     app.init({
-        width: 400 || window.innerWidth,
+        width: 640 || window.innerWidth,
         height: 400 || window.innerHeight,
-        images: ["images/mi2-jail.gif"],
+        images: ["images/Monkey_island_2_prison.png"],
         cameras: [{
             id: "isometric",
             background: 0xdddddd,
@@ -235,9 +329,9 @@ $(document).ready(function() {
             bottom: 0.5,
             left: 0.5,
             right: 1,
-            position: {x: 1000, y: 1000, z: -1000},
+            position: {x: -500, y: 250, z: 500},
             lookAt: {x: 0, y: 0, z: 0}
-        },{
+        },{ // editors camera!
             id: "front",
             background: 0xdddddd,
             top: 0.5,
@@ -246,15 +340,16 @@ $(document).ready(function() {
             right: 0.5,
             position: {x: 0, y: 0, z: 1000},
             lookAt: {x: 0, y: 0, z: 0},
-            aspectRatio: 5
+            aspectRatio: 1,
+            //overrideMaterial: wireframe
         },{
-            id: "top",
+            id: "front45",
             background: 0xeeeeee,
             top: 0.5,
             bottom: 0,
             left: 0.5,
             right: 1,
-            position: {x: 0, y: 1000, z: 0},
+            position: {x: 500, y: 250, z: 500},
             lookAt: {x: 0, y: 0, z: 0}
         }]
     });
@@ -264,27 +359,7 @@ $(document).ready(function() {
     var projectorWorldViewProj = new THREE.Matrix4();
 
     app.on("frameStart", function() {
-        camera2.position.x += 0.01;
-        //camera2.position.y += 0.01;
-        camera2.lookAt(new THREE.Vector3(0, 0, 0));
-
-        projectorWorldViewProj.set( 0.5, 0.0, 0.0, 0.5,
-                  0.0, 0.5, 0.0, 0.5,
-                  0.0, 0.0, 0.5, 0.5,
-                  0.0, 0.0, 0.0, 1.0 );
-
-        projectorWorldViewProj.copy(camera2.matrix);
-        projectorWorldViewProj.copy(camera2.matrixWorldInverse);
-
-        //projectorWorldViewProj.multiply( camera2.projectionMatrix );
-        //projectorWorldViewProj.multiply( camera2.matrixWorldInverse );
-        //projectorWorldViewProj.multiply( camera2.matrix );
-
-
-        uniforms.projectorWorldViewProjTransform.value = projectorWorldViewProj;
-        console.log(JSON.stringify(projectorWorldViewProj.elements));
-
-    })
+    });
 });
 
 </script>

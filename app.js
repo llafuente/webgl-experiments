@@ -119,8 +119,10 @@ App.prototype.attachInputs = function() {
     var self = this;
 
     ['mousedown', 'mousewheel', 'mouseup', 'mousemove', 'contextmenu', 'touchstart', 'touchend', 'touchmove', 'DOMMouseScroll'].forEach(function(ev_name) {
-        document.addEventListener(ev_name, function (event) {
+        //document.addEventListener(ev_name, function (event) {
+        self.container.addEventListener(ev_name, function (event) {
             event.preventDefault();
+            event.stopPropagation();
 
             self.emit(ev_name, event);
 
@@ -129,7 +131,9 @@ App.prototype.attachInputs = function() {
     });
 
     window.addEventListener('keydown', function (event) {
-        event.preventDefault();
+        //event.preventDefault();
+        //event.stopPropagation();
+
         self.emit('keydown', event);
     }, false);
 
@@ -163,7 +167,8 @@ App.prototype.attachInputs = function() {
                 // add relative-to-camera-screen coords
                 var cameraH = (cam.$cfg.top - cam.$cfg.bottom) * self.options.height;
                 event.cameraX = event.clientX - (cam.$cfg.left * self.options.width);
-                event.cameraY = cameraH - (event.clientY - ((1 - cam.$cfg.top) * self.options.height));
+                event.cameraIY = (event.clientY - ((1 - cam.$cfg.top) * self.options.height));
+                event.cameraY = cameraH - event.cameraIY;
                 //console.log(event.cameraX, event.cameraY);
                 return;
             }
@@ -196,14 +201,18 @@ App.prototype.createRenderer = function() {
 App.prototype.createCameras = function(camera_cfg) {
     camera_cfg.forEach(function(cfg) {
         cfg.aspectRatio = cfg.aspectRatio || 1;
+        cfg.overrideMaterial = cfg.overrideMaterial || null;
 
-        var height = (cfg.top - cfg.bottom) * this.options.height * 0.5 / cfg.aspectRatio;
-        var width = (cfg.left - cfg.right) * this.options.width * 0.5 / cfg.aspectRatio;
+        cfg.height = (cfg.top - cfg.bottom) * this.options.height;
+        cfg.width = (cfg.right - cfg.left) * this.options.width;
+
+        var height = cfg.height * 0.5 / cfg.aspectRatio;
+        var width = cfg.width * 0.5 / cfg.aspectRatio;
 
         console.log("create camera", cfg.id, width, ",", height);
 
         var camera = new THREE.OrthographicCamera(
-            -width, width,
+            width, -width,
             height, -height,
             10,
             5000
@@ -249,11 +258,13 @@ App.prototype.createCameras = function(camera_cfg) {
     this.lastSelectedCamera = this.cameras[0];
 }
 App.prototype.createControls = function() {
+/*
     var controls = new THREE.OrbitControls(this);
     this.controls.push(controls);
     return ;
 
-    var controls = new THREE.OrthographicTrackballControls(this.cameras);
+
+    var controls = new THREE.OrthographicTrackballControls(this);
 
     controls.lookSpeed = 0.0125;
     controls.movementSpeed = 500;
@@ -266,6 +277,8 @@ App.prototype.createControls = function() {
     controls.lon = 250;
 
     this.controls.push(controls);
+*/
+    this.controls.push(new THREE.OrthographicZoom(this));
 };
 
 
@@ -287,6 +300,8 @@ App.prototype.render = function(delta) {
         var height = Math.floor(w_height * (cfg.top - cfg.bottom));
 
         //console.log("scissors", cfg.id, left, bottom, width, height);
+
+        this.scene.overrideMaterial = cam.$cfg.overrideMaterial;
 
         // scissor
         if (max > 1) {
@@ -314,8 +329,12 @@ App.prototype.update = function() {
 
     requestAnimationFrame(this.update.bind(this));
 
+    this.emit("frameStart");
+
     this.render(delta);
     this.stats.update();
+
+    this.emit("frameEnded");
 };
 
 function buildAxis(src, dst, colorHex, dashed) {

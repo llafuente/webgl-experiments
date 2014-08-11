@@ -3,15 +3,14 @@
  * @author Patrick Fuller / http://patrick-fuller.com
  */
 
-THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
+THREE.OrthographicTrackballControls = function ( app, domElement ) {
+	this.app = app;
 
 	var self = this;
 	var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM: 4, TOUCH_PAN: 5 };
 
-	this.cameras = cameras;
-
 	// choose the first one as default
-	this.camera = cameras[0];
+	this.camera = app.cameras[0];
 	this.domElement = ( domElement !== undefined ) ? domElement : document;
 
 	// API
@@ -197,19 +196,14 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 				self.camera.bottom = _zoomFactor * self.bottom0 + ( 1 - _zoomFactor ) *  self.center0.y;
 
 				if ( self.staticMoving ) {
-
 					_zoomStart.copy( _zoomEnd );
-
 				} else {
-
 					_zoomStart.y += ( _zoomEnd.y - _zoomStart.y ) * this.dynamicDampingFactor;
-
 				}
-
 			}
-
 		}
 
+		self.camera.updateProjectionMatrix();
 	};
 
 	this.panCamera = function () {
@@ -304,10 +298,7 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 	// listeners
 
 	function keydown( event ) {
-
-		if ( self.enabled === false ) return;
-
-		window.removeEventListener( 'keydown', keydown );
+		self.app.off('keydown', keydown);
 
 		_prevState = _state;
 
@@ -332,45 +323,17 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 	}
 
 	function keyup( event ) {
-
-		if ( self.enabled === false ) return;
-
 		_state = _prevState;
 
-		window.addEventListener( 'keydown', keydown, false );
-
+		this.app.on('keydown', keydown);
 	}
 
 	function mousedown( event ) {
-
-		if ( self.enabled === false ) return;
-
-		event.preventDefault();
-		event.stopPropagation();
-
-		// choose the valid camera
-		var i,
-			px = event.clientX / SCREEN_WIDTH,
-			py = 1 - (event.clientY / SCREEN_HEIGHT),
-			cam;
-
-		for (i = 0; i < self.cameras.length; ++i) {
-			console.log(i, px, py, self.cameras[i].$cfg);
-			cam = self.cameras[i];
-
-			if (px >= cam.$cfg.left &&
-				py >= cam.$cfg.bottom &&
-				px <= cam.$cfg.left + cam.$cfg.width &&
-				py <= cam.$cfg.bottom + cam.$cfg.height) {
-				self.camera = cam;
-			}
-		}
-
-
-
 		if ( _state === STATE.NONE ) {
 			_state = event.button;
 		}
+
+		self.camera = self.app.lastSelectedCamera;
 
 		if ( _state === STATE.ROTATE && !self.noRotate ) {
 
@@ -386,18 +349,12 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 
 		}
 
-		document.addEventListener( 'mousemove', mousemove, false );
-		document.addEventListener( 'mouseup', mouseup, false );
+		self.app.on('mousemove', mousemove);
+		self.app.on('mouseup', mouseup);
 
 	}
 
 	function mousemove( event ) {
-
-		if ( self.enabled === false ) return;
-
-		event.preventDefault();
-		event.stopPropagation();
-
 		if ( _state === STATE.ROTATE && !self.noRotate ) {
 
 			_rotateEnd = self.getMouseProjectionOnBall( event.clientX, event.clientY );
@@ -415,25 +372,14 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 	}
 
 	function mouseup( event ) {
-
-		if ( self.enabled === false ) return;
-
-		event.preventDefault();
-		event.stopPropagation();
-
 		_state = STATE.NONE;
 
 		document.removeEventListener( 'mousemove', mousemove );
 		document.removeEventListener( 'mouseup', mouseup );
-
 	}
 
 	function mousewheel( event ) {
-
-		if ( self.enabled === false ) return;
-
-		event.preventDefault();
-		event.stopPropagation();
+		self.camera = self.app.lastSelectedCamera;
 
 		var delta = 0;
 
@@ -452,9 +398,6 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 	}
 
 	function touchstart( event ) {
-
-		if ( self.enabled === false ) return;
-
 		switch ( event.touches.length ) {
 
 			case 1:
@@ -482,12 +425,6 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 	}
 
 	function touchmove( event ) {
-
-		if ( self.enabled === false ) return;
-
-		event.preventDefault();
-		event.stopPropagation();
-
 		switch ( event.touches.length ) {
 
 			case 1:
@@ -512,9 +449,6 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 	}
 
 	function touchend( event ) {
-
-		if ( self.enabled === false ) return;
-
 		switch ( event.touches.length ) {
 
 			case 1:
@@ -535,19 +469,25 @@ THREE.OrthographicTrackballControls = function ( cameras, domElement ) {
 
 	}
 
-	this.domElement.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
+	function enable_wrap(callback) {
+		return function() {
+			if ( self.enabled === false ) return;
 
-	this.domElement.addEventListener( 'mousedown', mousedown, false );
+			callback.apply(this, arguments);
+		};
+	}
 
-	this.domElement.addEventListener( 'mousewheel', mousewheel, false );
-	this.domElement.addEventListener( 'DOMMouseScroll', mousewheel, false ); // firefox
+	this.app.on( 'mousedown', enable_wrap(mousedown), false );
 
-	this.domElement.addEventListener( 'touchstart', touchstart, false );
-	this.domElement.addEventListener( 'touchend', touchend, false );
-	this.domElement.addEventListener( 'touchmove', touchmove, false );
+	//this.app.on( 'mousewheel', enable_wrap(mousewheel), false );
+	//this.app.on( 'DOMMouseScroll', enable_wrap(mousewheel), false ); // firefox
 
-	window.addEventListener( 'keydown', keydown, false );
-	window.addEventListener( 'keyup', keyup, false );
+	this.app.on( 'touchstart', enable_wrap(touchstart), false );
+	this.app.on( 'touchend', enable_wrap(touchend), false );
+	this.app.on( 'touchmove', enable_wrap(touchmove), false );
+
+	this.app.on( 'keydown', enable_wrap(keydown), false );
+	this.app.on( 'keyup', enable_wrap(keyup), false );
 
 	this.handleResize();
 
