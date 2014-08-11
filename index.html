@@ -53,22 +53,38 @@
             <img id="tool-pull" src="images/1409329484_arrow_down_alt1-64.png" />
           </div>
           <div>
-            <form id="scene">
-             <legend>Scene Size</legend>
-             <input type="number" id="scene_x" name="scene_x" value="200" />
-             <input type="number" id="scene_y" name="scene_y" value="200" />
-             <input type="submit" name="Change" value="Change" />
+            <form id="create-scene-form">
+              <legend>Create Scene</legend>
+              <input type="number" id="create_scene_x" name="data[x]" value="200" />
+              <input type="number" id="create_scene_y" name="data[y]" value="200" />
+              <input type="text" id="create_scene_image" name="data[image]" value="200" />
+              <input type="submit" name="Create" value="Create" id="create-scene" />
             </form>
+
+            <form id="load-scene-form">
+              <legend>Load Scene</legend>
+              <input type="text" id="load_scene_image" name="data[image]" value="200" />
+              <input type="submit" name="Load" value="Load" id="load-scne" />
+            </form>
+
+            <form id="save-scene-form">
+              <legend>Save Scene</legend>
+              <input type="text" id="save-scene-name" name="data[image]" value="test.json" />
+              <input type="submit" name="Save" value="Save" id="save-scene" />
+            </form>
+
             <form id="brush">
              <legend>Brush Size</legend>
              <input type="number" id="brush_x" name="brush_x" value="1" />
              <input type="number" id="brush_y" name="brush_y" value="1" />
+             <input type="number" id="brush_force" name="brush_force" value="10" />
              <select id="brush_amount" name="brush_amount">
-               <option value="20">PULL</option>
-               <option value="-20">PUSH</option>
+               <option value="1">PULL</option>
+               <option value="-1">PUSH</option>
              </select>
              <input type="submit" name="Change" value="Change" />
             </form>
+
           </div>
         </div>
     </body>
@@ -135,7 +151,8 @@ app.createScene = function() {
 
     // LIGHTS
     var light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(110, 100, 10);
+    light.position.set(110, 200, 10);
+    light.target.position.set(40, 0, 10);
 
     light.castShadow = true;
     light.shadowCameraVisible = true;
@@ -143,7 +160,7 @@ app.createScene = function() {
     light.shadowMapWidth = 512;
     light.shadowMapHeight = 512;
 
-    var d = 200;
+    var d = 400;
 
     light.shadowCameraLeft = -d;
     light.shadowCameraRight = d;
@@ -151,100 +168,21 @@ app.createScene = function() {
     light.shadowCameraBottom = -d;
 
     light.shadowCameraFar = 1000;
-    light.shadowDarkness = 0.75;
+    light.shadowDarkness = 2;
 
     this.scene.add(light);
-/*
-    var light = new THREE.SpotLight(0xffffff, 1, 0, Math.PI / 2, 1);
-    light.position.set(500, 500, 500);
-    light.target.position.set(0, 0, 0);
-
-    light.castShadow = true;
-
-    light.shadowCameraNear = 0;
-    light.shadowCameraFar = 25000;
-    light.shadowCameraFov = 45;
-
-    light.shadowCameraRight    =  500;
-    light.shadowCameraLeft     = -500;
-    light.shadowCameraTop      =  500;
-    light.shadowCameraBottom   = -500;
-
-
-    //light.shadowCameraVisible = true;
-
-    light.shadowBias = 0.0001;
-    light.shadowDarkness = 0.5;
-
-    light.shadowMapWidth = 1024;
-    light.shadowMapHeight = 1024;
-
-    light.shadowCameraVisible = true;
-
-    this.scene.add(light);
-
-    // Cubes
-    var pixels = image_to_pixels(image, document.getElementById("ref-image-depth")),
-        width = image.width,
-        height = image.height,
-        count = 0,
-        box_size = 7;
-
-    for (var i = 0; i < pixels.length; i += 4) {
-        if (pixels[i] !== undefined) {
-            var box_width = (pixels[i] + pixels[i+1] + pixels[i+2]) / 3 / 50;
-            var geometry = new THREE.BoxGeometry(box_size, box_size, box_size * box_width);
-
-            for (var j = 0; j < geometry.faces.length; ++j) {
-                geometry.faces[ j ].color.setRGB(pixels[i] / 255, pixels[i+1] / 255, pixels[i+2] / 255);
-            }
-            var material = new THREE.MeshBasicMaterial({ vertexColors: THREE.FaceColors, overdraw: 0.5 });
-
-            //var material = new THREE.MeshLambertMaterial({color: (pixels[i]) << 16 ^ (pixels[i+1] * 255) << 8 ^ (pixels[i+2] * 255) << 0, specular: 0xffffff, ambient: 0x000000 });
-            //var material = new THREE.MeshPhongMaterial({color: (pixels[i]) << 16 ^ (pixels[i+1] * 255) << 8 ^ (pixels[i+2] * 255) << 0, specular: 0xffffff, ambient: 0x000000 });
-
-            var cube = new THREE.Mesh(geometry, material);
-            cube.castShadow = true;
-            cube.receiveShadow = true;
-
-
-            cube.position.x = (count % width) * box_size;
-            cube.position.y = Math.floor(height - count / width) * box_size;
-            //cube.position.x = (count % 20) * box_size;
-            //cube.position.y = Math.floor(count / 20) * box_size;
-            this.scene.add(cube);
-
-        }
-        ++count;
-    }
-
-    // Plane
-
-    var geometry = new THREE.BoxGeometry(10, 10, 10);
-
-    //var material = new THREE.MeshBasicMaterial({ color: 0xe0e0e0, overdraw: 0.5 });
-    //var material = new THREE.MeshPhongMaterial({ color: 0xe0e0e0 });
-    material.ambient = material.color;
-
-    var box = new THREE.Mesh(geometry, material);
-    this.scene.add(box);
-
-    */
-
     // link scene size here!
 
-    var material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+    //MeshPhongMaterial
     var material = new THREE.MeshLambertMaterial({
-        color: 0xffffff
-    });
-    var material = new THREE.MeshPhongMaterial({
         color: 0xffffff,
         map: THREE.ImageUtils.loadTexture("images/Monkey_island_2_prison.png")
     });
 
-    var resolution = [320, 200];
+    this.image = {};
+    var resolution = this.image.resolution = [320, 200];
 
-    var geometry = new THREE.PlaneGeometry(resolution[0], resolution[1], resolution[0], resolution[1]);
+    var geometry = this.geometry = new THREE.PlaneGeometry(resolution[0], resolution[1], resolution[0], resolution[1]);
     geometry.applyMatrix(
         new THREE.Matrix4().makeRotationY(Math.PI)
     );
@@ -261,22 +199,11 @@ app.createScene = function() {
     plane.position.y = -0;
     this.scene.add(plane);
 
-    function move_vertex(x, y, amount) {
-        // y need to be inverted
-        // console.log(x, y, amount);
-
-        var idx = x +  y * (resolution[0] + 1);
-        if (idx < geometry.vertices.length) {
-            // push/pull
-            geometry.vertices[idx].z += amount;
-        }
-    }
-
     // TODO offset cam.position.xy
     this.on("mousedown", function(event) {
         var tx = parseInt(jQuery("#brush_x").val(), 10),
             ty = parseInt(jQuery("#brush_y").val(), 10),
-            amount = parseInt(jQuery("#brush_amount").val(), 10),
+            amount = parseInt(jQuery("#brush_amount").val(), 10) * parseInt(jQuery("#brush_force").val(), 10),
             x,
             y,
             cam = app.cameras[2],
@@ -293,19 +220,107 @@ app.createScene = function() {
 
         if (app.lastSelectedCamera == cam) {
 
-            for (x = 0; x < tx; ++x) {
-                for (y = 0; y < ty; ++y) {
-                    move_vertex(mouse_x + x - offset[0], mouse_y + y - offset[1], amount);
-                    //move_vertex(0 + x, 0 + y, amount);
-                }
-            }
+            var brush = app.createPlainBrush(tx, ty, amount);
 
+            app.applyBrush(mouse_x - offset[0], mouse_y - offset[1], brush)
             geometry.verticesNeedUpdate = true;
         }
     });
 
     this.displayAxes();
 };
+
+app.createPlainBrush = function (x, y, amount) {
+    var i, j;
+    var brush = [];
+
+    for (i = 0; i < x; ++i) {
+        brush[i] = [];
+        for (j = 0; j < y; ++j) {
+            brush[i][j] = amount;
+        }
+    }
+
+    return brush;
+}
+
+app.applyBrush = function (x, y, brush) {
+    var i, j;
+
+    for (i = 0; i < brush.length; ++i) {
+        for (j = 0; j < brush[i].length; ++j) {
+            this.moveVertex(x + i, y + j, brush[i][j]);
+        }
+    }
+}
+
+
+app.moveVertex = function(x, y, amount) {
+    // y need to be inverted
+    // console.log(x, y, amount);
+    if (x > this.image.resolution[0]) return ;
+
+    var idx = x +  y * (this.image.resolution[0] + 1);
+    if (idx < this.geometry.vertices.length) {
+        // push/pull
+        this.geometry.vertices[idx].z += amount;
+    }
+};
+
+
+app.save = function(filename) {
+    var height_map = [];
+    var v = this.geometry.vertices,
+        i,
+        max = v.length,
+        floor = Math.floor,
+        max_fn = Math.max;
+
+    for (i = 0; i < max; ++i) {
+        height_map[i] = max_fn(0, floor(v[i].z));
+    }
+
+    var data_str = JSON.stringify({
+        filename: filename,
+        image: "images/Monkey_island_2_prison.png",
+        width: 320,
+        height: 200,
+        height_map: height_map,
+        faces_removed: []
+    });
+
+var boundary = "---------------------------7da24f2e50046";
+var body = '--' + boundary + '\r\n'
+         // Parameter name is "file" and local filename is "temp.txt"
+         + 'Content-Disposition: form-data; name="file";'
+         + 'filename="' + filename + '"\r\n'
+         // Add the file's mime-type
+         + 'Content-type: plain/text\r\n\r\n'
+         // Add your data:
+         + data_str + '\r\n'
+         + '--'+ boundary + '--';
+
+    jQuery.ajax({
+        url: '/upload',
+        type: 'POST',
+        contentType: "multipart/form-data; boundary="+boundary,
+        dataType: 'json',
+        data: body,
+        cache: false,
+        processData: false, // Don't process the files
+        success: function(data, textStatus, jqXHR)
+        {
+            console.log(data, textStatus);
+        },
+        error: function(jqXHR, textStatus, errorThrown)
+        {
+            // Handle errors here
+            console.log('ERRORS: ' + textStatus);
+            // STOP LOADING SPINNER
+        }
+    });
+
+}
 
 $(document).ready(function() {
     app.init({
@@ -359,6 +374,12 @@ $(document).ready(function() {
     var projectorWorldViewProj = new THREE.Matrix4();
 
     app.on("frameStart", function() {
+    });
+
+    jQuery("#save-scene").bind("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        app.save($("#save-scene-name").val());
     });
 });
 
