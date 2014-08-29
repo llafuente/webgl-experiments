@@ -14,6 +14,13 @@
             canvas {
                 border: 1px solid black;
             }
+            #tools img {
+                border: 1px solid white;
+                border-radius: 4px;
+            }
+            #tools .selected {
+                border: 1px solid black;
+            }
         </style>
         <script src="EventEmitter.js"></script>
         <script src="jquery-2.1.1.js"></script>
@@ -26,9 +33,19 @@
         <script src="controls/OrthographicTrackballControls.js"></script>
 
         <script src="libs/stats.min.js"></script>
+
+        <script data-src="shaders/vertex.js" type="x-shader/x-vertex" id="vertexshader"></script>
+        <script data-src="shaders/fragment.js" type="x-shader/x-fragment" id="fragmentshader"></script>
+
     </head>
 
     <body>
+        <div style="width:64px; position: absolute; right: 0;" id="tools">
+            <img id="tool-camera" class="selected" src="images/1409329287_film_camera_16mm.png" />
+            <img id="tool-move" src="images/1409329351_move_alt1-64.png" />
+            <img id="tool-push" src="images/1409329490_arrow_up_alt1-64.png" />
+            <img id="tool-pull" src="images/1409329484_arrow_down_alt1-64.png" />
+        </div>
     </body>
 
 <script>
@@ -46,6 +63,36 @@ function mark (position) {
     this.scene.add(cube);
 }
 
+var camera2,
+    uniforms,
+    TPMaterial;
+
+function createTPMaterial() {
+    camera2 = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 100.0);
+    camera2.position.x = 0;
+    camera2.position.y = 10;
+    camera2.position.z = 0;
+    camera2.lookAt(new THREE.Vector3());
+    camera2.updateProjectionMatrix();
+
+    uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, {
+      time: { type:"f", value:0 },
+      resolution: { type:"v2", value:new THREE.Vector2(viewportWidth, viewportHeight) },
+      projectorWorldViewProjTransform: {type: "m4", value: null}
+    }]);
+
+    // do not include tex0 above it fails
+    uniforms.tex0 = { type:"t", value: THREE.ImageUtils.loadTexture("mi2-3.gif") }
+    uniforms.tex0.value.wrapS = uniforms.tex0.value.wrapT = THREE.Repeat;
+
+    TPMaterial = new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: shaders.vertexshader,
+      fragmentShader: shaders.fragmentshader,
+      lights: true
+    });
+}
+
 var app = new App();
 
 app.createScene = function() {
@@ -53,9 +100,10 @@ app.createScene = function() {
     //this.cameras[1].debug();
     //this.cameras[2].debug();
 
-    // LIGHTS
-    this.scene.add(new THREE.AmbientLight(0x222222));
+    this.scene.add(new THREE.AmbientLight(0xffffff));
 
+/*
+    // LIGHTS
 
     var light = new THREE.SpotLight(0xffffff, 1, 0, Math.PI / 2, 1);
     light.position.set(0, 1500, 0);
@@ -80,7 +128,6 @@ app.createScene = function() {
     //mark(light.position);
 
     // Cubes
-/*
     var pixels = image_to_pixels(image, document.getElementById("ref-image-depth")),
         width = image.width,
         height = image.height,
@@ -114,7 +161,6 @@ app.createScene = function() {
         }
         ++count;
     }
-    */
 
     // Plane
 
@@ -128,12 +174,34 @@ app.createScene = function() {
     var box = new THREE.Mesh(geometry, material);
     this.scene.add(box);
 
-    var material = new THREE.MeshPhongMaterial({ color: 0xdedede });
+    */
+    var material = new THREE.MeshPhongMaterial({
+        color: 0xffff00,
+        wireframe: true,
+    });
     material.ambient = material.color;
-    geometry = new THREE.PlaneGeometry(512, 512);
+    var geometry = new THREE.PlaneGeometry(100, 100, 100, 100);
     geometry.applyMatrix(
-        new THREE.Matrix4().makeRotationX(- Math.PI / 2)
+        new THREE.Matrix4().makeRotationY(Math.PI)
     );
+
+    geometry.dynamic = true;
+
+    this.on("mousedown", function(event) {
+        if (app.lastSelectedCamera == app.cameras[2]) {
+
+            var idx = event.cameraX +  event.cameraY * 200;
+
+            console.log(idx, "pull!");
+
+            // edit geometry
+
+            geometry.verticesNeedUpdate = true;
+
+            geometry.vertices[idx].z += 20;
+        }
+    })
+
     var plane = new THREE.Mesh(geometry, material);
 
     plane.castShadow = false;
@@ -170,14 +238,15 @@ $(document).ready(function() {
             position: {x: 1000, y: 1000, z: -1000},
             lookAt: {x: 0, y: 0, z: 0}
         },{
-            id: "left",
+            id: "front",
             background: 0xdddddd,
             top: 0.5,
             bottom: 0,
             left: 0,
             right: 0.5,
-            position: {x: 1000, y: 0, z: 0},
-            lookAt: {x: 0, y: 0, z: 0}
+            position: {x: 0, y: 0, z: 1000},
+            lookAt: {x: 0, y: 0, z: 0},
+            aspectRatio: 5
         },{
             id: "top",
             background: 0xeeeeee,
@@ -191,6 +260,31 @@ $(document).ready(function() {
     });
 
     app.start();
+
+    var projectorWorldViewProj = new THREE.Matrix4();
+
+    app.on("frameStart", function() {
+        camera2.position.x += 0.01;
+        //camera2.position.y += 0.01;
+        camera2.lookAt(new THREE.Vector3(0, 0, 0));
+
+        projectorWorldViewProj.set( 0.5, 0.0, 0.0, 0.5,
+                  0.0, 0.5, 0.0, 0.5,
+                  0.0, 0.0, 0.5, 0.5,
+                  0.0, 0.0, 0.0, 1.0 );
+
+        projectorWorldViewProj.copy(camera2.matrix);
+        projectorWorldViewProj.copy(camera2.matrixWorldInverse);
+
+        //projectorWorldViewProj.multiply( camera2.projectionMatrix );
+        //projectorWorldViewProj.multiply( camera2.matrixWorldInverse );
+        //projectorWorldViewProj.multiply( camera2.matrix );
+
+
+        uniforms.projectorWorldViewProjTransform.value = projectorWorldViewProj;
+        console.log(JSON.stringify(projectorWorldViewProj.elements));
+
+    })
 });
 
 </script>

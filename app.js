@@ -159,6 +159,12 @@ App.prototype.attachInputs = function() {
                 py <= cam.$cfg.top) {
                 console.log(i, "found camera");
                 self.lastSelectedCamera = cam;
+
+                // add relative-to-camera-screen coords
+                var cameraH = (cam.$cfg.top - cam.$cfg.bottom) * self.options.height;
+                event.cameraX = event.clientX - (cam.$cfg.left * self.options.width);
+                event.cameraY = cameraH - (event.clientY - ((1 - cam.$cfg.top) * self.options.height));
+                //console.log(event.cameraX, event.cameraY);
                 return;
             }
         }
@@ -189,8 +195,10 @@ App.prototype.createRenderer = function() {
  */
 App.prototype.createCameras = function(camera_cfg) {
     camera_cfg.forEach(function(cfg) {
-        var height = (cfg.top - cfg.bottom) * this.options.height * 0.5;
-        var width = (cfg.left - cfg.right) * this.options.width * 0.5;
+        cfg.aspectRatio = cfg.aspectRatio || 1;
+
+        var height = (cfg.top - cfg.bottom) * this.options.height * 0.5 / cfg.aspectRatio;
+        var width = (cfg.left - cfg.right) * this.options.width * 0.5 / cfg.aspectRatio;
 
         console.log("create camera", cfg.id, width, ",", height);
 
@@ -278,7 +286,7 @@ App.prototype.render = function(delta) {
         var width  = Math.floor(w_width  * (cfg.right - cfg.left));
         var height = Math.floor(w_height * (cfg.top - cfg.bottom));
 
-        console.log("scissors", cfg.id, left, bottom, width, height);
+        //console.log("scissors", cfg.id, left, bottom, width, height);
 
         // scissor
         if (max > 1) {
