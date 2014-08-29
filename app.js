@@ -2,6 +2,8 @@ var App = function() {
     this.clock = new THREE.Clock();
     this.cameras = [];
     this.controls = [];
+    this.shaders = {};
+    this.images = {};
 
     this.container = document.createElement('div');
     document.body.appendChild(this.container);
@@ -59,7 +61,8 @@ App.prototype.init = function(options) {
             bottom: 0.5,
             position: {x: 0, y: 1000, z: 0},
             lookAt: {x: 0, y: 0, z: 0}
-        }]
+        }],
+        images: []
     }, options || {});
 
     console.log(this.options);
@@ -76,6 +79,68 @@ App.prototype.init = function(options) {
     this.createScene();
 };
 
+App.prototype.start = function() {
+    var self = this;
+
+    this.preload(function() {
+        self.update();
+    });
+};
+App.prototype.shaders = {};
+App.prototype.images = {};
+
+App.prototype.preload = function(callback) {
+    // preload
+    var items_to_load = 0,
+        self = this;
+
+    function loaded(name) {
+        console.log("asset [", name, "] loaded: ", items_to_load);
+
+        if (!--items_to_load) {
+            callback && callback();
+            self.emit("ready");
+        }
+    }
+
+    var shader_list = jQuery.makeArray($("script")).filter(function(el) {
+        return ["x-shader/x-vertex", "x-shader/x-fragment"].indexOf($(el).attr("type")) !== -1;
+    });
+
+    items_to_load += shader_list.length;
+
+    shader_list.forEach(function(el) {
+        var src = $(el).attr("data-src");
+        if (src) {
+            console.log("loading shader: ", el);
+            $.ajax({
+              url: src,
+              complete: function(data){
+                  var txt = data.responseText;
+                  self.shaders[$(el).attr("id")] = txt;
+
+                  loaded(src);
+               },
+               dataType: 'application/javascript'
+            });
+        } else {
+            // no need to load, it's in the body
+            --items_to_load;
+            this.shaders[$(el).attr("id")] = el.textContent;
+        }
+    });
+
+    items_to_load += this.options.images.length;
+
+    this.options.images.forEach(function(src) {
+        self.images[src] = THREE.ImageUtils.loadTexture(src, null, function() {
+            loaded(src);
+        }, function() {
+            // error!? what to do in this case...
+            loaded(src);
+        });
+    });
+}
 App.prototype.attachInputs = function() {
     var self = this;
 

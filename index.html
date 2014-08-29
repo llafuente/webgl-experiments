@@ -26,7 +26,6 @@
     </head>
 
     <body>
-      <img src="images/mi2-jail.gif" id="ref-image" style="display:none" />
     </body>
 
 <script>
@@ -43,8 +42,6 @@ function mark (position) {
     cube.position.z = position.z;
     this.scene.add(cube);
 }
-
-var image = document.getElementById("ref-image");
 
 var app = new App();
 
@@ -143,14 +140,19 @@ app.createScene = function() {
     this.displayAxes();
 };
 
-image.onload = function() {
+$(document).ready(function() {
     app.init({
         width: 400 || window.innerWidth,
-        height: 400 || window.innerHeight
+        height: 400 || window.innerHeight,
+        images: ["images/mi2-jail.gif"]
     });
-    app.update();
-};
 
+    app.start();
+    /*
+    app.preload();
+    app.update();
+    */
+});
 
 </script>
 
