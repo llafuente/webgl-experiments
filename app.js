@@ -4,6 +4,7 @@ var App = function() {
     this.controls = [];
     this.shaders = {};
     this.images = {};
+    this.lastEvents = {};
 
     this.container = document.createElement('div');
     document.body.appendChild(this.container);
@@ -24,46 +25,19 @@ App.prototype.lastSelectedCamera = null;
 App.prototype.controls = null;
 App.prototype.renderer = null;
 App.prototype.scene = null;
+App.prototype.lastEvents = {};
 
 App.prototype.init = function(options) {
     this.options = jQuery.extend({
         width: 0,
         height: 0,
-        cameras: [{
-            background: 0xcc0000,
-            width: 0.5,
-            height: 0.5,
-            left: 0,
-            bottom: 0,
-            position: {x: 500, y: 500, z: 500},
-            lookAt: {x: 0, y: 0, z:0}
-        },{
-            background: 0x00cc00,
-            width: 0.5,
-            height: 0.5,
-            left: 0.5,
-            bottom: 0,
-            position: {x: 1000, y: 1000, z: -1000},
-            lookAt: {x: 0, y: 0, z: 0}
-        },{
-            background: 0x00cc00,
-            width: 0.5,
-            height: 0.5,
-            left: 0,
-            bottom: 0.5,
-            position: {x: 1000, y: 1000, z: -1000},
-            lookAt: {x: 0, y: 0, z: 0}
-        },{
-            background: 0xcc0000,
-            width: 0.5,
-            height: 0.5,
-            left: 0.5,
-            bottom: 0.5,
-            position: {x: 0, y: 1000, z: 0},
-            lookAt: {x: 0, y: 0, z: 0}
-        }],
+        cameras: [],
         images: []
     }, options || {});
+
+    if (!this.options.cameras.length) {
+        throw new Error("options.camera is empty?!");
+    }
 
     console.log(this.options);
 
@@ -147,17 +121,26 @@ App.prototype.attachInputs = function() {
     ['mousedown', 'mousewheel', 'mouseup', 'mousemove', 'contextmenu', 'touchstart', 'touchend', 'touchmove', 'DOMMouseScroll'].forEach(function(ev_name) {
         document.addEventListener(ev_name, function (event) {
             event.preventDefault();
+
             self.emit(ev_name, event);
-        }, false );
+
+            self.lastEvents[ev_name] = event;
+        }, false);
     });
 
-    window.addEventListener( 'keydown', function (event) {
+    window.addEventListener('keydown', function (event) {
         event.preventDefault();
         self.emit('keydown', event);
-    }, false );
+    }, false);
 
     this.on("mousedown", function(event) {
         console.log("app - onMouseDown");
+        if (self.lastEvents.mousedown) {
+            console.log("app - onMouseDown - diff: ",
+                event.clientX - self.lastEvents.mousedown.clientX,
+                event.clientY - self.lastEvents.mousedown.clientY
+           );
+        }
         // choose the valid camera
         var i,
             px = event.clientX / self.options.width,
@@ -171,9 +154,9 @@ App.prototype.attachInputs = function() {
             cam = self.cameras[i];
 
             if (px >= cam.$cfg.left &&
+                px <= cam.$cfg.right &&
                 py >= cam.$cfg.bottom &&
-                px <= cam.$cfg.left + cam.$cfg.width &&
-                py <= cam.$cfg.bottom + cam.$cfg.height) {
+                py <= cam.$cfg.top) {
                 console.log(i, "found camera");
                 self.lastSelectedCamera = cam;
                 return;
@@ -206,17 +189,20 @@ App.prototype.createRenderer = function() {
  */
 App.prototype.createCameras = function(camera_cfg) {
     camera_cfg.forEach(function(cfg) {
-        var width = cfg.width * this.options.width;
-        var height = cfg.height * this.options.height;
+        var height = (cfg.top - cfg.bottom) * this.options.height * 0.5;
+        var width = (cfg.left - cfg.right) * this.options.width * 0.5;
+
+        console.log("create camera", cfg.id, width, ",", height);
 
         var camera = new THREE.OrthographicCamera(
-            0.5 * width / - 2,
-            0.5 * width / 2,
-            height / 2,
-            height / - 2,
-            0,
+            -width, width,
+            height, -height,
+            10,
             5000
-        );
+       );
+
+        //camera.fov = Math.PI / 4;
+        //camera.updateProjectionMatrix();
 
         if (cfg.position) {
             camera.position.x = cfg.position.x;
@@ -232,7 +218,7 @@ App.prototype.createCameras = function(camera_cfg) {
 
         cfg.helpers = {
             frustum: new THREE.CameraHelper(camera),
-            origin: new THREE.Mesh(new THREE.SphereGeometry(5, 5, 5), new THREE.MeshBasicMaterial( { color: 0x000088 } ))
+            origin: new THREE.Mesh(new THREE.SphereGeometry(5, 5, 5), new THREE.MeshBasicMaterial({ color: 0x000088 }))
         };
 
         var self = this;
@@ -287,15 +273,20 @@ App.prototype.render = function(delta) {
         cam = this.cameras[i];
         cfg = cam.$cfg;
 
-        var left   = Math.floor( w_width  * cfg.left );
-        var bottom = Math.floor( w_height * cfg.bottom );
-        var width  = Math.floor( w_width  * cfg.width );
-        var height = Math.floor( w_height * cfg.height );
+        var left   = Math.floor(w_width  * cfg.left);
+        var bottom = Math.floor(w_height * cfg.bottom);
+        var width  = Math.floor(w_width  * (cfg.right - cfg.left));
+        var height = Math.floor(w_height * (cfg.top - cfg.bottom));
 
-        this.renderer.setViewport( left, bottom, width, height );
-        this.renderer.setScissor( left, bottom, width, height );
-        this.renderer.enableScissorTest ( true );
-        this.renderer.setClearColor( cfg.background );
+        console.log("scissors", cfg.id, left, bottom, width, height);
+
+        // scissor
+        if (max > 1) {
+            this.renderer.setViewport(left, bottom, width, height);
+            this.renderer.setScissor(left, bottom, width, height);
+            this.renderer.enableScissorTest (true);
+        }
+        this.renderer.setClearColor(cfg.background);
 
         cfg.frameStarted && cfg.frameStarted(delta);
 
@@ -319,7 +310,7 @@ App.prototype.update = function() {
     this.stats.update();
 };
 
-function buildAxis( src, dst, colorHex, dashed ) {
+function buildAxis(src, dst, colorHex, dashed) {
     var geom = new THREE.Geometry(),
         mat;
 
@@ -332,11 +323,11 @@ function buildAxis( src, dst, colorHex, dashed ) {
     //mat.depthTest = false;
     //mat.depthWrite = false;
 
-    geom.vertices.push( src.clone() );
-    geom.vertices.push( dst.clone() );
+    geom.vertices.push(src.clone());
+    geom.vertices.push(dst.clone());
     geom.computeLineDistances(); // This one is SUPER important, otherwise dashed lines will appear as simple plain lines
 
-    var axis = new THREE.Line( geom, mat, THREE.LinePieces );
+    var axis = new THREE.Line(geom, mat, THREE.LinePieces);
 
     return axis;
 }
@@ -346,12 +337,12 @@ App.prototype.displayAxes = function(length) {
         length = length || 100;
         this.axes = new THREE.Object3D();
 
-        this.axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( length, 0, 0 ), 0xFF0000, false ) ); // +X
-        this.axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( -length, 0, 0 ), 0xFF0000, true) ); // -X
-        this.axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, length, 0 ), 0x00FF00, false ) ); // +Y
-        this.axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, -length, 0 ), 0x00FF00, true ) ); // -Y
-        this.axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, length ), 0x0000FF, false ) ); // +Z
-        this.axes.add( buildAxis( new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, -length ), 0x0000FF, true ) ); // -Z
+        this.axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(length, 0, 0), 0xFF0000, false)); // +X
+        this.axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(-length, 0, 0), 0xFF0000, true)); // -X
+        this.axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, length, 0), 0x00FF00, false)); // +Y
+        this.axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -length, 0), 0x00FF00, true)); // -Y
+        this.axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, length), 0x0000FF, false)); // +Z
+        this.axes.add(buildAxis(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -length), 0x0000FF, true)); // -Z
 
         this.scene.add(this.axes);
     }

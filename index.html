@@ -7,9 +7,12 @@
         <style>
             body {
                 font-family: Monospace;
-                background-color: #f0f0f0;
+                background-color: #e0e0e0;
                 margin: 0px;
                 overflow: hidden;
+            }
+            canvas {
+                border: 1px solid black;
             }
         </style>
         <script src="EventEmitter.js"></script>
@@ -119,12 +122,14 @@ app.createScene = function() {
 
     //var material = new THREE.MeshBasicMaterial({ color: 0xe0e0e0, overdraw: 0.5 });
     //var material = new THREE.MeshPhongMaterial({ color: 0xe0e0e0 });
-    var material = new THREE.MeshPhongMaterial({ color: 0xcccccc });
+    var material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
     material.ambient = material.color;
 
     var box = new THREE.Mesh(geometry, material);
     this.scene.add(box);
 
+    var material = new THREE.MeshPhongMaterial({ color: 0xdedede });
+    material.ambient = material.color;
     geometry = new THREE.PlaneGeometry(512, 512);
     geometry.applyMatrix(
         new THREE.Matrix4().makeRotationX(- Math.PI / 2)
@@ -144,14 +149,48 @@ $(document).ready(function() {
     app.init({
         width: 400 || window.innerWidth,
         height: 400 || window.innerHeight,
-        images: ["images/mi2-jail.gif"]
+        images: ["images/mi2-jail.gif"],
+        cameras: [{
+            id: "isometric",
+            background: 0xdddddd,
+            // screen position, based on this will calculate real world size camera for you
+            top: 1,
+            bottom: 0.5,
+            left: 0,
+            right: 0.5,
+            position: {x: 500, y: 500, z: 500},
+            lookAt: {x: 0, y: 0, z:0}
+        },{
+            id: "isometric2",
+            background: 0xeeeeee,
+            top: 1,
+            bottom: 0.5,
+            left: 0.5,
+            right: 1,
+            position: {x: 1000, y: 1000, z: -1000},
+            lookAt: {x: 0, y: 0, z: 0}
+        },{
+            id: "left",
+            background: 0xdddddd,
+            top: 0.5,
+            bottom: 0,
+            left: 0,
+            right: 0.5,
+            position: {x: 1000, y: 0, z: 0},
+            lookAt: {x: 0, y: 0, z: 0}
+        },{
+            id: "top",
+            background: 0xeeeeee,
+            top: 0.5,
+            bottom: 0,
+            left: 0.5,
+            right: 1,
+            position: {x: 0, y: 1000, z: 0},
+            lookAt: {x: 0, y: 0, z: 0}
+        }]
     });
 
     app.start();
-    /*
-    app.preload();
-    app.update();
-    */
 });
 
 </script>
