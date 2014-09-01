@@ -329,12 +329,12 @@ App.prototype.update = function() {
 
     requestAnimationFrame(this.update.bind(this));
 
-    this.emit("frameStart");
+    this.emit("frameStart", [delta]);
 
     this.render(delta);
     this.stats.update();
 
-    this.emit("frameEnded");
+    this.emit("frameEnded", [delta]);
 };
 
 function buildAxis(src, dst, colorHex, dashed) {
