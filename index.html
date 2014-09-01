@@ -148,7 +148,6 @@ app.createScene = function() {
 
     this.scene.add(new THREE.AmbientLight(0xffffff));
 
-
     // LIGHTS
     var light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(110, 200, 10);
@@ -223,12 +222,107 @@ app.createScene = function() {
             var brush = app.createPlainBrush(tx, ty, amount);
 
             app.applyBrush(mouse_x - offset[0], mouse_y - offset[1], brush)
-            geometry.verticesNeedUpdate = true;
         }
     });
 
     this.displayAxes();
 };
+
+// GRID DEFORM
+
+var floor = Math.floor,
+    min = Math.min,
+    round = Math.round;
+/*
+ * test
+ * console.log(box(0, 0, [[0, 0],[1, 1]]) == 0);
+ * console.log(box(0, 1, [[0, 0],[1, 1]]) == 0);
+ * console.log(box(1, 0, [[0, 0],[1, 1]]) == 1);
+ * console.log(box(1, 1, [[0, 0],[1, 1]]) == 1);
+ *
+ * console.log(box(1, 1, [[0, 1],[1, 2]]) == 2);
+ * console.log(box(0.5, 0.5, [[0, 1],[1, 2]]) == 1);
+ */
+function gradient_box(x, y, box) {
+    //console.log(x, y, box);
+    var output = box[0][0] + (
+        (box[0][1] - box[0][0]) * y +
+        (box[1][1] - box[1][0]) * y +
+        (box[1][0] - box[0][0]) * x +
+        (box[1][1] - box[0][1]) * x
+     ) * 0.5;
+
+    return output;
+}
+
+function grid_factor(max_x, max_y, x, y, grid) {
+    var grid_x = grid.length - 1;
+    var grid_y = grid[0].length - 1;
+
+    var target_x = (grid_x) / (max_x - 1);
+    var target_y = (grid_y) / (max_y - 1);
+
+    var dx = min(grid_x, x * target_x),
+        dx1 = floor(dx),
+        dxf = dx - dx1,
+        dx2 = min(grid_x, dx1 + 1);
+
+    var dy = min(grid_y, y * target_y),
+        dy1 = floor(dy),
+        dyf = dy - dy1,
+        dy2 = min(grid_y, dy1 + 1);
+
+    var box = [
+        [grid[dx1][dy1], grid[dx2][dy1]],
+        [grid[dx1][dy2], grid[dx2][dy2]]
+    ];
+
+    var value = gradient_box(dxf, dyf, box);
+
+    //console.log(
+    //    x+":"+y,
+    //    "first", dx1+":"+dy1,
+    //    "second", dx2+":"+dy2,
+    //    "factors", dxf.toFixed(4)+":"+dyf.toFixed(4),
+    //    JSON.stringify(box),
+    //    value
+    //);
+
+    return value;
+}
+
+/*
+var ramp = [[1, 0, 1], [0, 1, 0], [1, 0, 1]];
+
+console.log("ramp 0.0", ramp_factor(3, 3, 0, 0, ramp));
+console.log("ramp 1.1", ramp_factor(3, 3, 1, 1, ramp));
+console.log("ramp 2.2", ramp_factor(3, 3, 2, 2, ramp));
+*/
+
+app.createGridBrush = function (x, y, min_amount, max_amount, grid) {
+    var diff = max_amount - min_amount;
+    var i, j;
+    var brush = [];
+
+    // forbid downscale
+    if (x < grid.length) {
+        throw new Error("downscale: invalid grid x");
+    }
+
+    if (y < grid[0].length) {
+        throw new Error("downscale: invalid grid y");
+    }
+
+    for (i = 0; i < x; ++i) {
+        brush[i] = [];
+        for (j = 0; j < y; ++j) {
+            brush[i][j] = min_amount + grid_factor(x, y, i, j, grid) * diff;
+            //console.log(i, j, brush[i][j]);
+        }
+    }
+
+    return brush;
+}
 
 app.createPlainBrush = function (x, y, amount) {
     var i, j;
@@ -245,6 +339,7 @@ app.createPlainBrush = function (x, y, amount) {
 }
 
 app.applyBrush = function (x, y, brush) {
+    console.log("applyBrush", x +":"+ y, brush.length +":"+ brush[0].length, brush);
     var i, j;
 
     for (i = 0; i < brush.length; ++i) {
@@ -252,13 +347,17 @@ app.applyBrush = function (x, y, brush) {
             this.moveVertex(x + i, y + j, brush[i][j]);
         }
     }
-}
 
+    this.geometry.verticesNeedUpdate = true;
+}
 
 app.moveVertex = function(x, y, amount) {
     // y need to be inverted
     // console.log(x, y, amount);
-    if (x > this.image.resolution[0]) return ;
+    if (x > this.image.resolution[0]) {
+        console.log("skip", x , y);
+        return ;
+    }
 
     var idx = x +  y * (this.image.resolution[0] + 1);
     if (idx < this.geometry.vertices.length) {
@@ -289,16 +388,16 @@ app.save = function(filename) {
         faces_removed: []
     });
 
-var boundary = "---------------------------7da24f2e50046";
-var body = '--' + boundary + '\r\n'
-         // Parameter name is "file" and local filename is "temp.txt"
-         + 'Content-Disposition: form-data; name="file";'
-         + 'filename="' + filename + '"\r\n'
-         // Add the file's mime-type
-         + 'Content-type: plain/text\r\n\r\n'
-         // Add your data:
-         + data_str + '\r\n'
-         + '--'+ boundary + '--';
+    var boundary = "---------------------------7da24f2e50046";
+    var body = '--' + boundary + '\r\n'
+             // Parameter name is "file" and local filename is "temp.txt"
+             + 'Content-Disposition: form-data; name="file";'
+             + 'filename="' + filename + '"\r\n'
+             // Add the file's mime-type
+             + 'Content-type: plain/text\r\n\r\n'
+             // Add your data:
+             + data_str + '\r\n'
+             + '--'+ boundary + '--';
 
     jQuery.ajax({
         url: '/upload',
@@ -319,7 +418,6 @@ var body = '--' + boundary + '\r\n'
             // STOP LOADING SPINNER
         }
     });
-
 }
 
 $(document).ready(function() {
@@ -370,6 +468,18 @@ $(document).ready(function() {
     });
 
     app.start();
+
+    setTimeout(function() {
+        var brush = app.createGridBrush(320, 60, 0, 20, [[0, 0], [1, 1]]);
+
+        //console.log(
+        //    brush.map(function(b) {
+        //        return JSON.stringify(b)
+        //    }).join("\n")
+        //);
+
+        app.applyBrush(0, 80, brush);
+    }, 5000)
 
     var projectorWorldViewProj = new THREE.Matrix4();
 
