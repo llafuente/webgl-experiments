@@ -4,7 +4,10 @@ var App = function() {
     this.controls = [];
     this.shaders = {};
     this.images = {};
+    this.uniforms = {};
+    this.materials = {};
     this.lastEvents = {};
+    this.running = false;
 
     this.container = document.createElement('div');
     document.body.appendChild(this.container);
@@ -25,7 +28,12 @@ App.prototype.lastSelectedCamera = null;
 App.prototype.controls = null;
 App.prototype.renderer = null;
 App.prototype.scene = null;
+App.prototype.shaders = null;
+App.prototype.images = null;
+App.prototype.uniforms = null;
+App.prototype.materials = null;
 App.prototype.lastEvents = {};
+App.prototype.running = false;
 
 App.prototype.init = function(options) {
     this.options = jQuery.extend({
@@ -41,25 +49,35 @@ App.prototype.init = function(options) {
 
     console.log(this.options);
 
-    this.attachInputs();
+    var self = this;
 
-    this.createRenderer();
+    this.preload(function() {
+        self.attachInputs();
 
-    this.scene = new THREE.Scene();
+        self.createRenderer();
 
-    this.createCameras(this.options.cameras);
-    this.createControls();
+        self.scene = new THREE.Scene();
 
-    this.createScene();
+        self.createCameras(self.options.cameras);
+        self.createControls();
+
+        self.createScene();
+    });
 };
 
 App.prototype.start = function() {
     var self = this;
 
-    this.preload(function() {
-        self.update();
-    });
+    this.running = true;
+    self.update();
 };
+
+App.prototype.stop = function() {
+    var self = this;
+
+    this.running = false;
+};
+
 App.prototype.shaders = {};
 App.prototype.images = {};
 
@@ -68,6 +86,14 @@ App.prototype.preload = function(callback) {
     var items_to_load = 0,
         self = this;
 
+    function apply_replacements(shader) {
+        Object.keys(THREE.ShaderChunk).forEach(function(key) {
+            console.log("replacements", key);
+            shader = shader.replace('%%' +key+'%%', THREE.ShaderChunk[key]);
+        });
+
+        return shader;
+    }
     function loaded(name) {
         console.log("asset [", name, "] loaded: ", items_to_load);
 
@@ -91,7 +117,7 @@ App.prototype.preload = function(callback) {
               url: src,
               complete: function(data){
                   var txt = data.responseText;
-                  self.shaders[$(el).attr("id")] = txt;
+                  self.shaders[$(el).attr("id")] = apply_replacements(txt);
 
                   loaded(src);
                },
@@ -100,7 +126,7 @@ App.prototype.preload = function(callback) {
         } else {
             // no need to load, it's in the body
             --items_to_load;
-            this.shaders[$(el).attr("id")] = el.textContent;
+            this.shaders[$(el).attr("id")] = apply_replacements(el.textContent);
         }
     });
 
@@ -325,6 +351,8 @@ App.prototype.render = function(delta) {
 };
 
 App.prototype.update = function() {
+    if (!this.running) return;
+
     var delta = this.clock.getDelta();
 
     requestAnimationFrame(this.update.bind(this));

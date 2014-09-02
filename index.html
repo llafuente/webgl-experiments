@@ -39,8 +39,8 @@
 
         <script src="libs/stats.min.js"></script>
 
-        <script data-src="shaders/vertex.js" type="x-shader/x-vertex" id="vertexshader"></script>
-        <script data-src="shaders/fragment.js" type="x-shader/x-fragment" id="fragmentshader"></script>
+        <script data-src="shaders/vertex.js" type="x-shader/x-vertex" id="tex_projector_vs"></script>
+        <script data-src="shaders/fragment.js" type="x-shader/x-fragment" id="tex_projector_fs"></script>
 
     </head>
 
@@ -103,36 +103,6 @@ function mark (position) {
     this.scene.add(cube);
 }
 
-var camera2,
-    uniforms,
-    TPMaterial;
-
-function createTPMaterial() {
-    camera2 = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 100.0);
-    camera2.position.x = 0;
-    camera2.position.y = 10;
-    camera2.position.z = 0;
-    camera2.lookAt(new THREE.Vector3());
-    camera2.updateProjectionMatrix();
-
-    uniforms = THREE.UniformsUtils.merge([THREE.UniformsLib.lights, {
-      time: { type:"f", value:0 },
-      resolution: { type:"v2", value:new THREE.Vector2(viewportWidth, viewportHeight) },
-      projectorWorldViewProjTransform: {type: "m4", value: null}
-    }]);
-
-    // do not include tex0 above it fails
-    uniforms.tex0 = { type:"t", value: THREE.ImageUtils.loadTexture("mi2-3.gif") }
-    uniforms.tex0.value.wrapS = uniforms.tex0.value.wrapT = THREE.Repeat;
-
-    TPMaterial = new THREE.ShaderMaterial({
-      uniforms: uniforms,
-      vertexShader: shaders.vertexshader,
-      fragmentShader: shaders.fragmentshader,
-      lights: true
-    });
-}
-
 var wireframe = new THREE.MeshPhongMaterial({
     color: 0x555555,
     wireframe: true,
@@ -141,12 +111,41 @@ wireframe.ambient = wireframe.color;
 
 var app = new App();
 
+app.createTextureProjectorMat = function() {
+    var u_tex_projector =  THREE.UniformsUtils.merge([
+        THREE.UniformsLib.lights,
+        THREE.UniformsLib.shadowmap,
+        {
+            time: {type:"f", value:0},
+            resolution: {type:"v2", value:new THREE.Vector2(this.options.width, this.options.height)},
+            projectorWorldViewProjTransform: {type: "m4", value: this.cameras[2].projectionMatrix}
+        }
+    ]);
+
+    // do not include tex0 above it fails
+    u_tex_projector.tex0 = { type:"t", value: THREE.ImageUtils.loadTexture("images/Monkey_island_2_prison.png")};
+    u_tex_projector.tex0.value.wrapS = u_tex_projector.tex0.value.wrapT = THREE.Repeat;
+
+
+    var m_tex_projector = new THREE.ShaderMaterial({
+        uniforms: u_tex_projector,
+        vertexShader: this.shaders.tex_projector_vs,
+        fragmentShader: this.shaders.tex_projector_fs,
+        lights: true
+    });
+
+    this.uniforms.tex_projector = u_tex_projector;
+    this.materials.tex_projector = m_tex_projector;
+}
+
 app.createScene = function() {
     //this.cameras[0].debug();
     //this.cameras[1].debug();
     //this.cameras[2].debug();
 
-    this.scene.add(new THREE.AmbientLight(0xffffff));
+    this.createTextureProjectorMat();
+
+    this.scene.add(new THREE.AmbientLight(0x00ff00));
 
     // LIGHTS
     var light = new THREE.DirectionalLight(0xffffff, 1);
@@ -170,7 +169,10 @@ app.createScene = function() {
     light.shadowDarkness = 2;
 
     this.scene.add(light);
-    // link scene size here!
+
+    // update materials, light was created
+    this.materials.tex_projector.needsUpdate.true;
+
 
     //MeshPhongMaterial
     var material = new THREE.MeshLambertMaterial({
@@ -191,7 +193,10 @@ app.createScene = function() {
 
     geometry.dynamic = true;
 
-    var plane = new THREE.Mesh(geometry, material);
+    //var plane = new THREE.Mesh(geometry, material);
+    console.log("plane material", this.materials.tex_projector);
+    var plane = new THREE.Mesh(geometry, this.materials.tex_projector);
+
 
     plane.castShadow = true;
     plane.receiveShadow = true;
@@ -470,7 +475,7 @@ $(document).ready(function() {
     app.start();
 
     setTimeout(function() {
-        var brush = app.createGridBrush(320, 60, 0, 20, [[0, 0], [1, 1]]);
+        var brush = app.createGridBrush(322, 60, 0, 60, [[0, 0], [1, 1]]);
 
         //console.log(
         //    brush.map(function(b) {
