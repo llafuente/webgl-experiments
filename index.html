@@ -188,8 +188,8 @@ app.createScene = function() {
         new THREE.Matrix4().makeRotationY(Math.PI)
     );
 
-    console.log(geometry.vertices[0]);
-    console.log(geometry.vertices[geometry.vertices.length - 1]);
+    // plane min/max
+    // console.log(geometry.vertices[0], geometry.vertices[geometry.vertices.length - 1]);
 
     geometry.dynamic = true;
 
@@ -344,7 +344,7 @@ app.createPlainBrush = function (x, y, amount) {
 }
 
 app.applyBrush = function (x, y, brush) {
-    console.log("applyBrush", x +":"+ y, brush.length +":"+ brush[0].length, brush);
+    //console.log("applyBrush", x +":"+ y, brush.length +":"+ brush[0].length, brush);
     var i, j;
 
     for (i = 0; i < brush.length; ++i) {

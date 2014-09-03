@@ -144,8 +144,20 @@ App.prototype.preload = function(callback) {
 App.prototype.attachInputs = function() {
     var self = this;
 
-    ['mousedown', 'mousewheel', 'mouseup', 'mousemove', 'contextmenu', 'touchstart', 'touchend', 'touchmove', 'DOMMouseScroll'].forEach(function(ev_name) {
-        //document.addEventListener(ev_name, function (event) {
+    // jQuery mouse events
+    ["click","dblclick","focusout","hover","mousedown","mouseenter","mouseleave","mousemove","mouseout","mouseover","mouseup"].forEach(function(ev_name) {
+        jQuery(self.container).on(ev_name, function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            self.emit(ev_name, event);
+
+            self.lastEvents[ev_name] = event;
+        }, false);
+    });
+
+    // touch/wheel event direct bind
+    ['mousewheel', 'contextmenu', 'touchstart', 'touchend', 'touchmove', 'DOMMouseScroll'].forEach(function(ev_name) {
         self.container.addEventListener(ev_name, function (event) {
             event.preventDefault();
             event.stopPropagation();
@@ -156,14 +168,55 @@ App.prototype.attachInputs = function() {
         }, false);
     });
 
-    window.addEventListener('keydown', function (event) {
-        //event.preventDefault();
-        //event.stopPropagation();
+    // keyboard do not prevent this ones and attached to window
+    ['keydown', 'keyup'].forEach(function(ev_name) {
+        window.addEventListener(ev_name, function (event) {
+            self.emit(ev_name, event);
 
-        self.emit('keydown', event);
-    }, false);
+            self.lastEvents[ev_name] = event;
+        }, false);
+    });
 
+    function extend_mouse_events(event) {
+        var i,
+            px = event.clientX / self.options.width,
+            py = 1 - (event.clientY / self.options.height),
+            cam,
+            cfg;
+
+        if (px > 1 || py > 1) return;
+
+        for (i = 0; i < self.cameras.length; ++i) {
+            cam = self.cameras[i];
+            cfg = cam.$cfg;
+
+            if (px >= cfg.left &&
+                px <= cfg.right &&
+                py >= cfg.bottom &&
+                py <= cfg.top) {
+
+                // add relative-to-camera-screen coords
+                var cameraH = (cfg.top - cfg.bottom) * self.options.height;
+
+                event.camera = cam;
+
+                event.cameraX = event.clientX - (cfg.left * self.options.width);
+                event.cameraIY = (event.clientY - ((1 - cfg.top) * self.options.height));
+                event.cameraY = cameraH - event.cameraIY;
+
+                event.cameraRelX = event.cameraX / self.options.width;
+                event.cameraRelIY = event.cameraIY / self.options.height;
+                event.cameraRelY = event.cameraY / self.options.height;
+
+                return ;
+            }
+        }
+
+    }
+
+    // custom behaviors, we should add more like mouseup/move/over
     this.on("mousedown", function(event) {
+        /*
         console.log("app - onMouseDown");
         if (self.lastEvents.mousedown) {
             console.log("app - onMouseDown - diff: ",
@@ -171,33 +224,25 @@ App.prototype.attachInputs = function() {
                 event.clientY - self.lastEvents.mousedown.clientY
            );
         }
+        measureControl
+        */
         // choose the valid camera
-        var i,
-            px = event.clientX / self.options.width,
-            py = 1 - (event.clientY / self.options.height),
-            cam;
+        extend_mouse_events(event);
+        if (event.camera) {
+            console.log("select camera", cam.$cfg.id, i);
+            self.lastSelectedCamera = event.camera;
+        }
 
-        if (px > 1 || py > 1) return;
+        // raise more specific-events
 
-        for (i = 0; i < self.cameras.length; ++i) {
-            console.log(i, px, py, self.cameras[i].$cfg);
-            cam = self.cameras[i];
-
-            if (px >= cam.$cfg.left &&
-                px <= cam.$cfg.right &&
-                py >= cam.$cfg.bottom &&
-                py <= cam.$cfg.top) {
-                console.log(i, "found camera");
-                self.lastSelectedCamera = cam;
-
-                // add relative-to-camera-screen coords
-                var cameraH = (cam.$cfg.top - cam.$cfg.bottom) * self.options.height;
-                event.cameraX = event.clientX - (cam.$cfg.left * self.options.width);
-                event.cameraIY = (event.clientY - ((1 - cam.$cfg.top) * self.options.height));
-                event.cameraY = cameraH - event.cameraIY;
-                //console.log(event.cameraX, event.cameraY);
-                return;
-            }
+        // The value of which will be 1 for the left button, 2 for the middle button, or 3 for the right button.
+        switch(event.which) {
+            case 1:
+                this.emit("left-mousedown", [event]);
+            case 2:
+                this.emit("middle-mousedown", [event]);
+            case 3:
+                this.emit("right-mousedown", [event]);
         }
     });
 

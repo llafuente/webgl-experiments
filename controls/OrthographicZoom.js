@@ -36,8 +36,8 @@ THREE.OrthographicZoom = function (app, domElement ) {
 THREE.OrthographicZoom.prototype.enabled = true;
 
 THREE.OrthographicZoom.prototype.mousewheel = function (event) {
-    var cam = this.app.lastSelectedCamera;
-    var cfg = cam.$cfg;
+    var cam = this.app.lastSelectedCamera,
+        cfg = cam.$cfg;
 
     if (event.wheelDelta > 0 || event.detail > 0) {
         cfg.aspectRatio *= 2;
@@ -45,8 +45,8 @@ THREE.OrthographicZoom.prototype.mousewheel = function (event) {
         cfg.aspectRatio /= 2;
     }
 
-    var height = cfg.height * 0.5 / cfg.aspectRatio;
-    var width = cfg.width * 0.5 / cfg.aspectRatio;
+    var height = cfg.height * 0.5 / cfg.aspectRatio,
+        width = cfg.width * 0.5 / cfg.aspectRatio;
 
     cam.left = width;
     cam.right = -width;
