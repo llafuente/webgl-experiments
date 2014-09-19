@@ -1,21 +1,13 @@
 THREE.OrthographicPan = function (app, domElement) {
     this.app = app;
 
-    var STATE = {
-            NONE: -1,
-            ROTATE: 0,
-            ZOOM: 1,
-            PAN: 2,
-            TOUCH_ROTATE: 3,
-            TOUCH_ZOOM: 4,
-            TOUCH_PAN: 5
-        },
-        self = this;
+    var self = this;
 
-    this.panSpeed = 1;
+    this.panSpeed = 0.5;
 
-    this.panStart = new THREE.Vector2();
-    this.panEnd = new THREE.Vector2();
+    this.panStart = new THREE.Vector3();
+    this.panEnd = new THREE.Vector3();
+    this.change = new THREE.Vector3();
 
     function enable_wrap(callback) {
         return function() {
@@ -33,37 +25,39 @@ THREE.OrthographicPan = function (app, domElement) {
     this.app.on('touchmove', enable_wrap(this.touchmove), false);
 };
 
-THREE.OrthographicZoom.prototype.enabled = true;
+THREE.OrthographicPan.prototype.enabled = true;
 
-THREE.OrthographicZoom.prototype.mousedown = function (event) {
-    // touch: event.touches[ 0 ].pageX, event.touches[ 0 ].pageY
-    this.panStart = _panEnd = self.getMouseOnScreen(event.clientX, event.clientY);
+THREE.OrthographicPan.prototype.mousedown = function (event) {
+    this.camera = event.camera;
 
-    this.app.on('mousemove', this.mousemove);
-    this.app.on('mouseup', this.mouseup);
+    this.panStart.set(event.clientX, event.clientY, 0);
+    this.panEnd.set(event.clientX, event.clientY, 0);
+
+    this._mousemove = this.mousemove.bind(this)
+    this.app.on('mousemove', this._mousemove);
+    this._mouseup = this.mouseup.bind(this)
+    this.app.on('mouseup', this._mouseup);
 };
 
-THREE.OrthographicZoom.prototype.mousemove = function (event) {
-    this.panEnd = self.getMouseOnScreen(event.clientX, event.clientY);
+THREE.OrthographicPan.prototype.mousemove = function (event) {
+    this.panEnd.set(event.clientX, event.clientY, 0);
 };
 
-THREE.OrthographicZoom.prototype.mouseup = function (event) {
-    _state = STATE.NONE;
-
-    this.app.off('mousemove', this.mousemove);
-    this.app.off('mouseup', this.mouseup);
+THREE.OrthographicPan.prototype.mouseup = function (event) {
+    this.app.off('mousemove', this._mousemove);
+    this.app.off('mouseup', this._mouseup);
 };
 
 
-THREE.OrthographicZoom.prototype.update = function () {
-    var mouseChange = _panEnd.clone().sub(_panStart);
+THREE.OrthographicPan.prototype.update = function () {
+    this.change.copy(this.panEnd).sub(this.panStart);
 
-    if (mouseChange.lengthSq()) {
-        mouseChange.multiplyScalar(self.panSpeed);
+    if (this.change.lengthSq() > 1) {
+        this.change.multiplyScalar(this.panSpeed);
 
-        self.camera.position.add(mouseChange);
-        self.target.add(mouseChange);
+        this.camera.translateX(this.change.x);
+        this.camera.translateY(this.change.y);
 
-        _panStart = _panEnd;
+        this.panStart.copy(this.panEnd);
     }
 };
