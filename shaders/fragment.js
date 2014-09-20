@@ -19,6 +19,8 @@ uniform sampler2D tex0;
     uniform float pointLightDistance[MAX_POINT_LIGHTS];
 #endif
 
+%%shadowmap_pars_fragment%%
+
 void main() {
     vec4 _projectorTexCoord = projectorTexCoord;
 
@@ -39,20 +41,5 @@ void main() {
         gl_FragColor = texture2D(tex0, _projectorTexCoord.xy);
     #endif
 
-    /*
-    gl_FragColor.r = 0.0;
-    gl_FragColor.g = 0.0;
-    gl_FragColor.b = 1.0;
-    */
-    //gl_FragColor = texture2D(tex0, vUv);
-    //gl_FragColor = texture2D(tex0, _projectorTexCoord.xy) * addedLights;
-
-    // no lights - camera projection
-    //vec2 uv = gl_FragCoord.xy / resolution.xy;
-    //uv.y = 1.0 - uv.y;
-    //gl_FragColor = texture2D(tex0, uv);
-
-    //gl_FragColor.r = gl_FragCoord.x  / resolution.x;
-    //gl_FragColor.r = 0.0;
-    //gl_FragColor.g = 1.0;
+    %%shadowmap_fragment%%
 }

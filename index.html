@@ -115,6 +115,7 @@ var app = new App();
 
 app.createTextureProjectorMat = function() {
     var u_tex_projector =  THREE.UniformsUtils.merge([
+        THREE.UniformsLib.common,
         THREE.UniformsLib.lights,
         THREE.UniformsLib.shadowmap,
         {
@@ -169,7 +170,7 @@ app.createScene = function() {
 
     light.shadowCameraNear = 0.01;
     light.shadowCameraFar = 400;
-    light.shadowDarkness = 0.5;
+    light.shadowDarkness = 1;
 
     this.scene.add(light);
 
@@ -203,7 +204,7 @@ app.createScene = function() {
     plane.position.y = -0;
     this.scene.add(plane);
 
-    /*
+/*
     var mesh;
     this.scene.add(mesh = new THREE.Mesh(
         //new THREE.PlaneGeometry(500, 500),
@@ -214,7 +215,7 @@ app.createScene = function() {
     ));
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    */
+*/
 
 
     // TODO offset cam.position.xy
@@ -491,6 +492,11 @@ $(document).ready(function() {
 
     setTimeout(function() {
         var brush = app.createGridBrush(322, 60, 0, 60, [[0, 0], [1, 1]]);
+        app.applyBrush(0, 93, brush);
+
+        brush = app.createPlainBrush(6, 60, 25);
+        app.applyBrush(20, 0, brush);
+        app.applyBrush(40, 0, brush);
 
         //console.log(
         //    brush.map(function(b) {
@@ -498,7 +504,6 @@ $(document).ready(function() {
         //    }).join("\n")
         //);
 
-        app.applyBrush(0, 80, brush);
     }, 5000)
 
     var projectorWorldViewProj = new THREE.Matrix4();

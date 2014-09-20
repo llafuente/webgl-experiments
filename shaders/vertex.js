@@ -5,7 +5,6 @@ varying vec2 vUv;
 varying vec3 vecPos;
 varying vec3 vecNormal;
 
-%%worldpos_vertex%%
 %%shadowmap_pars_vertex%%
 
 void main() {
@@ -17,7 +16,8 @@ void main() {
     vUv = uv;
 
     projectorTexCoord = projectorWorldViewProjTransform * v4_position;
-    //projectorTexCoord.xy = 0.5 * projectorTexCoord.xy + 0.5;
+
+    %%worldpos_vertex%%
 
     %%shadowmap_vertex%%
 }
