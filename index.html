@@ -31,6 +31,7 @@
 
         <!-- app friendly -->
         <script src="controls/OrthographicZoom.js"></script>
+        <script src="controls/OrthographicPan.js"></script>
 
         <!-- threejs -->
         <script src="controls/FlyControls.js"></script>
@@ -45,7 +46,8 @@
     </head>
 
     <body>
-        <div style="width:256px; position: absolute; right: 0;" id="tools">
+      <div id="container" style="width:75%; height: 100%"></div>
+        <div style="width:25%; height: 100%; border-left: solid black 1px; position: absolute; right: 0;" id="tools">
           <div>
             <img id="tool-camera" class="selected" src="images/1409329287_film_camera_16mm.png" />
             <img id="tool-move" src="images/1409329351_move_alt1-64.png" />
@@ -145,7 +147,7 @@ app.createScene = function() {
 
     this.createTextureProjectorMat();
 
-    this.scene.add(new THREE.AmbientLight(0x00ff00));
+    this.scene.add(new THREE.AmbientLight(0xffffff));
 
     // LIGHTS
     var light = new THREE.DirectionalLight(0xffffff, 1);
@@ -165,20 +167,15 @@ app.createScene = function() {
     light.shadowCameraTop = d;
     light.shadowCameraBottom = -d;
 
-    light.shadowCameraFar = 1000;
-    light.shadowDarkness = 2;
+    light.shadowCameraNear = 0.01;
+    light.shadowCameraFar = 400;
+    light.shadowDarkness = 0.5;
 
     this.scene.add(light);
 
     // update materials, light was created
     this.materials.tex_projector.needsUpdate.true;
 
-
-    //MeshPhongMaterial
-    var material = new THREE.MeshLambertMaterial({
-        color: 0xffffff,
-        map: THREE.ImageUtils.loadTexture("images/Monkey_island_2_prison.png")
-    });
 
     this.image = {};
     var resolution = this.image.resolution = [320, 200];
@@ -196,12 +193,29 @@ app.createScene = function() {
     //var plane = new THREE.Mesh(geometry, material);
     console.log("plane material", this.materials.tex_projector);
     var plane = new THREE.Mesh(geometry, this.materials.tex_projector);
+    //var plane = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
+    //    color: 0xcccccc
+    //}));
 
 
     plane.castShadow = true;
     plane.receiveShadow = true;
     plane.position.y = -0;
     this.scene.add(plane);
+
+    /*
+    var mesh;
+    this.scene.add(mesh = new THREE.Mesh(
+        //new THREE.PlaneGeometry(500, 500),
+        new THREE.TorusKnotGeometry(100, 20, 150, 30),
+        new THREE.MeshPhongMaterial({
+            color: 0xcccccc
+        })
+    ));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    */
+
 
     // TODO offset cam.position.xy
     this.on("mousedown", function(event) {
@@ -354,6 +368,7 @@ app.applyBrush = function (x, y, brush) {
     }
 
     this.geometry.verticesNeedUpdate = true;
+    this.geometry.computeFaceNormals();
 }
 
 app.moveVertex = function(x, y, amount) {
@@ -472,7 +487,7 @@ $(document).ready(function() {
         }]
     });
 
-    app.start();
+    app.start(333);
 
     setTimeout(function() {
         var brush = app.createGridBrush(322, 60, 0, 60, [[0, 0], [1, 1]]);

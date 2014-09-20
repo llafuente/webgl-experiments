@@ -11,7 +11,6 @@ THREE.OrthographicPan = function (app, domElement) {
 
     function enable_wrap(callback) {
         return function() {
-            console.log("enable_wrap", self.enabled);
             if (self.enabled === false) return;
 
             callback.apply(self, arguments);

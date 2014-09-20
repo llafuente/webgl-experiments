@@ -9,7 +9,7 @@ var App = function() {
     this.lastEvents = {};
     this.running = false;
 
-    this.container = document.createElement('div');
+    this.container = document.getElementById('container');
     document.body.appendChild(this.container);
 
     var stats = this.stats = new Stats();
@@ -65,11 +65,11 @@ App.prototype.init = function(options) {
     });
 };
 
-App.prototype.start = function() {
+App.prototype.start = function(force_timeout) {
     var self = this;
 
     this.running = true;
-    self.update();
+    self.update(force_timeout);
 };
 
 App.prototype.stop = function() {
@@ -88,7 +88,7 @@ App.prototype.preload = function(callback) {
 
     function apply_replacements(shader) {
         Object.keys(THREE.ShaderChunk).forEach(function(key) {
-            console.log("replacements", key);
+            //console.log("replacements", key);
             shader = shader.replace('%%' +key+'%%', THREE.ShaderChunk[key]);
         });
 
@@ -146,14 +146,14 @@ App.prototype.attachInputs = function() {
 
     // jQuery mouse events
     ["click","dblclick","focusout","hover","mousedown","mouseenter","mouseleave","mousemove","mouseout","mouseover","mouseup"].forEach(function(ev_name) {
-        jQuery(self.container).on(ev_name, function (event) {
+        jQuery(self.container)[ev_name](function (event) {
             event.preventDefault();
             event.stopPropagation();
 
             self.emit(ev_name, event);
 
             self.lastEvents[ev_name] = event;
-        }, false);
+        });
     });
 
     // touch/wheel event direct bind
@@ -216,20 +216,10 @@ App.prototype.attachInputs = function() {
 
     // custom behaviors, we should add more like mouseup/move/over
     this.on("mousedown", function(event) {
-        /*
-        console.log("app - onMouseDown");
-        if (self.lastEvents.mousedown) {
-            console.log("app - onMouseDown - diff: ",
-                event.clientX - self.lastEvents.mousedown.clientX,
-                event.clientY - self.lastEvents.mousedown.clientY
-           );
-        }
-        measureControl
-        */
         // choose the valid camera
         extend_mouse_events(event);
         if (event.camera) {
-            console.log("select camera", cam.$cfg.id, i);
+            console.log("select camera", event.camera.$cfg.id);
             self.lastSelectedCamera = event.camera;
         }
 
@@ -237,12 +227,15 @@ App.prototype.attachInputs = function() {
 
         // The value of which will be 1 for the left button, 2 for the middle button, or 3 for the right button.
         switch(event.which) {
-            case 1:
-                this.emit("left-mousedown", [event]);
-            case 2:
-                this.emit("middle-mousedown", [event]);
-            case 3:
-                this.emit("right-mousedown", [event]);
+        case 1:
+            this.emit("left-mousedown", event);
+            break;
+        case 2:
+            this.emit("middle-mousedown", event);
+            break;
+        case 3:
+            this.emit("right-mousedown", event);
+            break;
         }
     });
 
@@ -257,8 +250,10 @@ App.prototype.createRenderer = function() {
     renderer.setSize(this.options.width, this.options.height);
 
     renderer.shadowMapEnabled = true;
-    renderer.shadowMapSoft = true;
-    renderer.shadowMapType = THREE.PCFShadowMap;
+    renderer.shadowMapSoft = false;
+    //renderer.shadowMapType = THREE.PCFShadowMap;
+    //renderer.shadowMapType = THREE.BasicShadowMap;
+    renderer.shadowMapType = THREE.PCFSoftShadowMap;
 
     this.container.appendChild(renderer.domElement);
 };
@@ -350,6 +345,7 @@ App.prototype.createControls = function() {
     this.controls.push(controls);
 */
     this.controls.push(new THREE.OrthographicZoom(this));
+    this.controls.push(new THREE.OrthographicPan(this));
 };
 
 
@@ -395,12 +391,19 @@ App.prototype.render = function(delta) {
     }
 };
 
-App.prototype.update = function() {
+App.prototype.update = function(force_timeout) {
     if (!this.running) return;
 
     var delta = this.clock.getDelta();
 
-    requestAnimationFrame(this.update.bind(this));
+    if (force_timeout) {
+        var self = this;
+        setTimeout(function() {
+            self.update(force_timeout);
+        }, force_timeout);
+    } else {
+        requestAnimationFrame(this.update.bind(this));
+    }
 
     this.emit("frameStart", [delta]);
 
