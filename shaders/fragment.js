@@ -13,13 +13,20 @@ uniform float time;
 uniform vec2 resolution;
 uniform sampler2D tex0;
 
-#if MAX_POINT_LIGHTS > 0
-    uniform vec3 pointLightColor[MAX_POINT_LIGHTS];
-    uniform vec3 pointLightPosition[MAX_POINT_LIGHTS];
-    uniform float pointLightDistance[MAX_POINT_LIGHTS];
-#endif
+#chunk shadowmap_pars_fragment
 
-%%shadowmap_pars_fragment%%
+/*
+#chunk lights_phong_pars_fragment
+float specularStrength = 1.0;
+
+uniform vec3 diffuse;
+uniform float opacity;
+
+uniform vec3 ambient;
+uniform vec3 emissive;
+uniform vec3 specular;
+uniform float shininess;
+*/
 
 void main() {
     vec4 _projectorTexCoord = projectorTexCoord;
@@ -27,19 +34,11 @@ void main() {
     _projectorTexCoord /= projectorTexCoord.w;
     _projectorTexCoord.xy = 0.5 * projectorTexCoord.xy + 0.5;
 
+    gl_FragColor = texture2D(tex0, _projectorTexCoord.xy);
 
-    #if MAX_POINT_LIGHTS > 0
-        // Pretty basic lambertian lighting...
-        vec4 addedLights = vec4(0.0,0.0,0.0, 1.0);
-        for(int l = 0; l < MAX_POINT_LIGHTS; l++) {
-            vec3 lightDirection = normalize(vecPos - pointLightPosition[l]);
-            addedLights.rgb += clamp(dot(-lightDirection, vecNormal), 0.0, 1.0) * pointLightColor[l];
-        }
+    /*
+    #/chunk lights_phong_fragment
+    */
 
-        gl_FragColor = texture2D(tex0, _projectorTexCoord.xy) + addedLights;
-    #else
-        gl_FragColor = texture2D(tex0, _projectorTexCoord.xy);
-    #endif
-
-    %%shadowmap_fragment%%
+    #chunk shadowmap_fragment
 }

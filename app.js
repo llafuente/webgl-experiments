@@ -89,7 +89,11 @@ App.prototype.preload = function(callback) {
     function apply_replacements(shader) {
         Object.keys(THREE.ShaderChunk).forEach(function(key) {
             //console.log("replacements", key);
-            shader = shader.replace('%%' +key+'%%', THREE.ShaderChunk[key]);
+            shader = shader.replace('#chunk ' + key,
+                "// start chunk " + key + "\n" +
+                THREE.ShaderChunk[key] +
+                "// end chunk " + key + "\n"
+            );
         });
 
         return shader;

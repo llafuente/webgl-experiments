@@ -125,6 +125,14 @@ app.createTextureProjectorMat = function() {
         }
     ]);
 
+    //    // light
+    u_tex_projector.specular = 0xff0000
+    //    // intermediate
+    u_tex_projector.color = 0x00ff00
+    //    // dark
+    u_tex_projector.emissive = 0x0000ff,
+    u_tex_projector.shininess = 0
+
     // do not include tex0 above it fails
     u_tex_projector.tex0 = { type:"t", value: THREE.ImageUtils.loadTexture("images/Monkey_island_2_prison.png")};
     u_tex_projector.tex0.value.wrapS = u_tex_projector.tex0.value.wrapT = THREE.Repeat;
@@ -134,7 +142,8 @@ app.createTextureProjectorMat = function() {
         uniforms: u_tex_projector,
         vertexShader: this.shaders.tex_projector_vs,
         fragmentShader: this.shaders.tex_projector_fs,
-        lights: true
+        lights: true,
+        shading: THREE.FlatShading // dual screen test :)
     });
 
     this.uniforms.tex_projector = u_tex_projector;
@@ -146,14 +155,15 @@ app.createScene = function() {
     //this.cameras[1].debug();
     //this.cameras[2].debug();
 
-    this.createTextureProjectorMat();
-
-    this.scene.add(new THREE.AmbientLight(0xffffff));
+    this.scene.add(new THREE.AmbientLight(0x333333));
 
     // LIGHTS
-    var light = new THREE.DirectionalLight(0xffffff, 1);
+    var light = new THREE.DirectionalLight(0xff0000, 1);
     light.position.set(110, 200, 10);
     light.target.position.set(40, 0, 10);
+
+    //light.position.set(200, -200, 200);
+    //light.target.position.set(0, 0, 0);
 
     light.castShadow = true;
     light.shadowCameraVisible = true;
@@ -169,13 +179,13 @@ app.createScene = function() {
     light.shadowCameraBottom = -d;
 
     light.shadowCameraNear = 0.01;
-    light.shadowCameraFar = 400;
+    light.shadowCameraFar = 800;
     light.shadowDarkness = 1;
 
     this.scene.add(light);
 
-    // update materials, light was created
-    this.materials.tex_projector.needsUpdate.true;
+    // create material after lights
+    this.createTextureProjectorMat();
 
 
     this.image = {};
@@ -191,12 +201,19 @@ app.createScene = function() {
 
     geometry.dynamic = true;
 
-    //var plane = new THREE.Mesh(geometry, material);
-    console.log("plane material", this.materials.tex_projector);
     var plane = new THREE.Mesh(geometry, this.materials.tex_projector);
+    //var plane = new THREE.Mesh(geometry, new THREE.MeshNormalMaterial());
+
+
     //var plane = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
-    //    color: 0xcccccc
-    //}));
+    //    // light
+    //    specular: '#ff0000',
+    //    // intermediate
+    //    color: '#00ff00',
+    //    // dark
+    //    emissive: '#0000ff',
+    //    shininess: 0
+    //  }));
 
 
     plane.castShadow = true;
@@ -370,6 +387,7 @@ app.applyBrush = function (x, y, brush) {
 
     this.geometry.verticesNeedUpdate = true;
     this.geometry.computeFaceNormals();
+    this.geometry.normalsNeedUpdate = true;
 }
 
 app.moveVertex = function(x, y, amount) {
