@@ -47,7 +47,7 @@ App.prototype.init = function(options) {
         throw new Error("options.camera is empty?!");
     }
 
-    console.log(this.options);
+    console.log("app.options", this.options);
 
     var self = this;
 
@@ -56,10 +56,11 @@ App.prototype.init = function(options) {
 
         self.createRenderer();
 
-        self.scene = new THREE.Scene();
-
         self.createCameras(self.options.cameras);
+
         self.createControls();
+
+        self.scene = new THREE.Scene();
 
         self.createScene();
     });
@@ -255,9 +256,9 @@ App.prototype.createRenderer = function() {
 
     renderer.shadowMapEnabled = true;
     renderer.shadowMapSoft = false;
-    //renderer.shadowMapType = THREE.PCFShadowMap;
+    renderer.shadowMapType = THREE.PCFShadowMap;
     //renderer.shadowMapType = THREE.BasicShadowMap;
-    renderer.shadowMapType = THREE.PCFSoftShadowMap;
+    //renderer.shadowMapType = THREE.PCFSoftShadowMap;
 
     this.container.appendChild(renderer.domElement);
 };
@@ -270,6 +271,7 @@ App.prototype.createRenderer = function() {
  */
 App.prototype.createCameras = function(camera_cfg) {
     camera_cfg.forEach(function(cfg) {
+        cfg.background = cfg.background || 0xffffff;
         cfg.aspectRatio = cfg.aspectRatio || 1;
         cfg.overrideMaterial = cfg.overrideMaterial || null;
 
@@ -283,9 +285,9 @@ App.prototype.createCameras = function(camera_cfg) {
 
         var camera = new THREE.OrthographicCamera(
             width, -width,
-            height, -height,
-            10,
-            5000
+            -height, height,
+            1,
+            1000
        );
 
         //camera.fov = Math.PI / 4;
@@ -372,7 +374,9 @@ App.prototype.render = function(delta) {
 
         //console.log("scissors", cfg.id, left, bottom, width, height);
 
-        this.scene.overrideMaterial = cam.$cfg.overrideMaterial;
+        if (cam.$cfg.overrideMaterial) {
+            this.scene.overrideMaterial = cam.$cfg.overrideMaterial;
+        }
 
         // scissor
         if (max > 1) {

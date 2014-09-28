@@ -119,19 +119,21 @@ app.createTextureProjectorMat = function() {
         THREE.UniformsLib.lights,
         THREE.UniformsLib.shadowmap,
         {
-            time: {type:"f", value:0},
             resolution: {type:"v2", value:new THREE.Vector2(this.options.width, this.options.height)},
             projectorWorldViewProjTransform: {type: "m4", value: this.cameras[2].projectionMatrix}
         }
     ]);
 
+    console.log(u_tex_projector);
     //    // light
-    u_tex_projector.specular = 0xff0000
+    //u_tex_projector.specular.value = new THREE.Color(1, 0, 0);
     //    // intermediate
-    u_tex_projector.color = 0x00ff00
+    u_tex_projector.diffuse.value = new THREE.Color(0, 1, 0);
     //    // dark
-    u_tex_projector.emissive = 0x0000ff,
-    u_tex_projector.shininess = 0
+    //u_tex_projector.emissive.value = new THREE.Color(0, 0, 1);
+
+    //u_tex_projector.shininess.value = 0
+
 
     // do not include tex0 above it fails
     u_tex_projector.tex0 = { type:"t", value: THREE.ImageUtils.loadTexture("images/Monkey_island_2_prison.png")};
@@ -158,19 +160,17 @@ app.createScene = function() {
     this.scene.add(new THREE.AmbientLight(0x333333));
 
     // LIGHTS
-    var light = new THREE.DirectionalLight(0xff0000, 1);
-    light.position.set(110, 200, 10);
+    //var light = new THREE.DirectionalLight(0xff0000, 1);
+    var light = new THREE.SpotLight(0xffff00, 1);
+    light.position.set(110, 200, -10);
     light.target.position.set(40, 0, 10);
-
-    //light.position.set(200, -200, 200);
-    //light.target.position.set(0, 0, 0);
 
     light.castShadow = true;
     light.shadowCameraVisible = true;
 
+
     light.shadowMapWidth = 512;
     light.shadowMapHeight = 512;
-
     var d = 400;
 
     light.shadowCameraLeft = -d;
@@ -178,11 +178,15 @@ app.createScene = function() {
     light.shadowCameraTop = d;
     light.shadowCameraBottom = -d;
 
+    light.shadowCameraFov = 45;
     light.shadowCameraNear = 0.01;
     light.shadowCameraFar = 800;
     light.shadowDarkness = 1;
 
     this.scene.add(light);
+
+    //var light = new THREE.DirectionalLight(0x000000, 1);
+    //this.scene.add(light);
 
     // create material after lights
     this.createTextureProjectorMat();
@@ -192,9 +196,9 @@ app.createScene = function() {
     var resolution = this.image.resolution = [320, 200];
 
     var geometry = this.geometry = new THREE.PlaneGeometry(resolution[0], resolution[1], resolution[0], resolution[1]);
-    geometry.applyMatrix(
-        new THREE.Matrix4().makeRotationY(Math.PI)
-    );
+    //geometry.applyMatrix(
+    //    new THREE.Matrix4().makeRotationY(Math.PI)
+    //);
 
     // plane min/max
     // console.log(geometry.vertices[0], geometry.vertices[geometry.vertices.length - 1]);
@@ -206,14 +210,8 @@ app.createScene = function() {
 
 
     //var plane = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
-    //    // light
-    //    specular: '#ff0000',
-    //    // intermediate
-    //    color: '#00ff00',
-    //    // dark
-    //    emissive: '#0000ff',
-    //    shininess: 0
-    //  }));
+    //    color: 0x00ff00
+    //}));
 
 
     plane.castShadow = true;
@@ -226,13 +224,16 @@ app.createScene = function() {
     this.scene.add(mesh = new THREE.Mesh(
         //new THREE.PlaneGeometry(500, 500),
         new THREE.TorusKnotGeometry(100, 20, 150, 30),
+        //new THREE.PolyhedronGeometry(50, 50, 150, 2),
+        //new THREE.BoxGeometry(100, 100, 100),
         new THREE.MeshPhongMaterial({
             color: 0xcccccc
         })
     ));
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
 */
+    //mesh.castShadow = true;
+    //mesh.receiveShadow = true;
+
 
 
     // TODO offset cam.position.xy
@@ -391,17 +392,18 @@ app.applyBrush = function (x, y, brush) {
 }
 
 app.moveVertex = function(x, y, amount) {
+    console.log(x, y, amount);
     // y need to be inverted
     // console.log(x, y, amount);
     if (x > this.image.resolution[0]) {
-        console.log("skip", x , y);
+        //console.log("skip", x , y);
         return ;
     }
 
-    var idx = x +  y * (this.image.resolution[0] + 1);
+    var idx = (this.image.resolution[0] - x) + (this.image.resolution[1] - y) * (this.image.resolution[0] + 1);
     if (idx < this.geometry.vertices.length) {
         // push/pull
-        this.geometry.vertices[idx].z += amount;
+        this.geometry.vertices[idx].z -= amount;
     }
 };
 
@@ -466,7 +468,6 @@ $(document).ready(function() {
         images: ["images/Monkey_island_2_prison.png"],
         cameras: [{
             id: "isometric",
-            background: 0xdddddd,
             // screen position, based on this will calculate real world size camera for you
             top: 1,
             bottom: 0.5,
@@ -476,7 +477,6 @@ $(document).ready(function() {
             lookAt: {x: 0, y: 0, z:0}
         },{
             id: "isometric2",
-            background: 0xeeeeee,
             top: 1,
             bottom: 0.5,
             left: 0.5,
@@ -485,7 +485,6 @@ $(document).ready(function() {
             lookAt: {x: 0, y: 0, z: 0}
         },{ // editors camera!
             id: "front",
-            background: 0xdddddd,
             top: 0.5,
             bottom: 0,
             left: 0,
@@ -496,7 +495,6 @@ $(document).ready(function() {
             //overrideMaterial: wireframe
         },{
             id: "front45",
-            background: 0xeeeeee,
             top: 0.5,
             bottom: 0,
             left: 0.5,
@@ -507,7 +505,7 @@ $(document).ready(function() {
     });
 
     app.start(333);
-
+/*
     setTimeout(function() {
         var brush = app.createGridBrush(322, 60, 0, 60, [[0, 0], [1, 1]]);
         app.applyBrush(0, 93, brush);
@@ -523,9 +521,7 @@ $(document).ready(function() {
         //);
 
     }, 5000)
-
-    var projectorWorldViewProj = new THREE.Matrix4();
-
+*/
     app.on("frameStart", function() {
     });
 

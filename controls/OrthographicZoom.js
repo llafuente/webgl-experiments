@@ -49,8 +49,8 @@ THREE.OrthographicZoom.prototype.mousewheel = function (event) {
 
     cam.left = width;
     cam.right = -width;
-    cam.top = height;
-    cam.bottom = -height;
+    cam.top = -height;
+    cam.bottom = height;
 
     cam.updateProjectionMatrix();
 };

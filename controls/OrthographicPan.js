@@ -55,7 +55,7 @@ THREE.OrthographicPan.prototype.update = function () {
         this.change.multiplyScalar(this.panSpeed);
 
         this.camera.translateX(this.change.x);
-        this.camera.translateY(this.change.y);
+        this.camera.translateY(-this.change.y);
 
         this.panStart.copy(this.panEnd);
     }
